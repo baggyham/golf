@@ -1,0 +1,80 @@
+/* Layout controls spacing and large-scale placement. */
+.app-shell {
+  max-width: 800px;
+  margin: auto;
+  padding: 16px 16px 45px;
+}
+.site-header {
+  background: var(--green);
+  color: #fff;
+  padding: 28px;
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+.site-header h1 {
+  font-size: clamp(1.5rem, 5vw, 2.3rem);
+  margin: 20px 0 5px;
+}
+.site-header p {
+  margin: 0;
+  color: #d8e8dd;
+}
+.brand {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+.brand-icon {
+  color: #a5dfad;
+}
+.eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  color: #b6dfc7;
+  margin-top: 12px;
+}
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.tabs button {
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--green);
+  border-radius: 12px;
+  padding: 14px 5px;
+  font-weight: 650;
+}
+.tabs button.active {
+  background: var(--green);
+  color: white;
+}
+.panel {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.app-shell footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.75rem;
+  padding-top: 24px;
+}
+@media (max-width: 480px) {
+  .panel {
+    padding: 14px;
+  }
+  .site-header {
+    padding: 20px;
+  }
+  .tabs button {
+    font-size: 0.85rem;
+  }
+  .app-shell {
+    padding: 10px 10px 35px;
+  }
+}

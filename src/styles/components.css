@@ -1,0 +1,235 @@
+/* Reusable component appearance. No scoring/business logic belongs in CSS. */
+.hole-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  text-align: center;
+}
+.hole-heading h2 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+.hole-heading p,
+.section-heading p {
+  color: var(--muted);
+  margin: 5px 0 0;
+  font-size: 0.86rem;
+}
+.hole-heading button {
+  background: #eef4ee;
+  border: 0;
+  padding: 9px;
+  border-radius: 9px;
+  color: var(--green);
+  font-size: 0.85rem;
+}
+.hole-picker {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 5px;
+  margin: 22px 0;
+}
+.hole-picker button {
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #f6f8f5;
+  color: var(--ink);
+}
+.hole-picker button.selected {
+  background: var(--green);
+  color: white;
+  border-color: var(--green);
+}
+.player-scores {
+  display: grid;
+  gap: 12px;
+}
+.player-score {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--border);
+  padding: 14px;
+  border-radius: 12px;
+}
+.player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.player-info span {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.point-count {
+  text-align: right;
+}
+.point-count strong {
+  font-size: 1.35rem;
+}
+.point-count span,
+.total small {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-left: 4px;
+}
+.stepper {
+  grid-column: 1/-1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+}
+.stepper button {
+  border: 0;
+  background: var(--green);
+  color: white;
+  width: 43px;
+  height: 43px;
+  border-radius: 10px;
+  font-size: 1.5rem;
+}
+.stepper strong {
+  font-size: 1.5rem;
+  min-width: 24px;
+  text-align: center;
+}
+.stepper .clear {
+  width: auto;
+  padding: 0 10px;
+  background: #edf1ed;
+  color: #496055;
+  font-size: 0.76rem;
+}
+.section-heading {
+  margin-bottom: 20px;
+}
+.standings {
+  display: grid;
+  gap: 10px;
+}
+.standing {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--border);
+  padding: 14px;
+  border-radius: 11px;
+}
+.standing:first-child {
+  background: #eff7ef;
+}
+.rank {
+  font-size: 1.2rem;
+  font-weight: 750;
+  color: var(--green);
+  width: 20px;
+}
+.standing-name {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.standing-name small {
+  color: var(--muted);
+}
+.total {
+  text-align: right;
+}
+.total strong {
+  font-size: 1.7rem;
+}
+.total small {
+  display: block;
+}
+.notice {
+  font-size: 0.79rem;
+  color: var(--muted);
+  margin: 20px 0 0;
+  line-height: 1.5;
+}
+.setup h3 {
+  margin: 26px 0 13px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+.setup label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.83rem;
+  font-weight: 650;
+  margin-bottom: 12px;
+}
+.setup input,
+.setup select {
+  width: 100%;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #ccdacf;
+  border-radius: 8px;
+  background: white;
+  color: var(--ink);
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14px;
+}
+.hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.player-setup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+}
+.player-setup small {
+  grid-column: 1/-1;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.hole-table-wrap {
+  overflow-x: auto;
+}
+.hole-table-wrap table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+}
+.hole-table-wrap th,
+.hole-table-wrap td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.hole-table-wrap select {
+  max-width: 120px;
+}
+.danger {
+  background: #fff2f0;
+  color: #9a3027;
+  border: 1px solid #e9b9b2;
+  border-radius: 8px;
+  padding: 11px;
+  margin-top: 20px;
+}
+@media (max-width: 480px) {
+  .form-grid,
+  .player-setup {
+    grid-template-columns: 1fr;
+  }
+  .hole-picker button {
+    height: 31px;
+  }
+  .stepper {
+    gap: 12px;
+  }
+}

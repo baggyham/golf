@@ -1,0 +1,415 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function admin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    function tournamentPath(id) {
+      return /databases/$(database)/documents/tournaments/$(id);
+    }
+
+    function organiser(id) {
+      return signedIn()
+        && get(tournamentPath(id)).data.createdBy == request.auth.uid;
+    }
+
+    function validDate(value) {
+      return value is string
+        && value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    function validRoundScorecard(card) {
+      return card is map
+        && card.keys().hasAll(['holes', 'totalPar'])
+        && card.keys().hasOnly(['holes', 'totalPar'])
+        && card.holes is list
+        && card.holes.size() == 18
+        && card.totalPar is int
+        && card.totalPar >= 54
+        && card.totalPar <= 108;
+    }
+
+    function validTeeRatings(tee) {
+      return tee is map
+        && tee.keys().hasAll(['courseRating', 'slopeRating'])
+        && tee.keys().hasOnly(['courseRating', 'slopeRating'])
+        && tee.courseRating is number
+        && tee.courseRating >= 50
+        && tee.courseRating <= 90
+        && tee.slopeRating is int
+        && tee.slopeRating >= 55
+        && tee.slopeRating <= 155;
+    }
+
+    // Accounts are created manually. The browser cannot create player profiles.
+    match /players/{playerId} {
+      allow get, list: if signedIn();
+      allow create, delete: if false;
+
+      allow update: if signedIn()
+        && request.auth.uid == playerId
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['displayName', 'handicapIndex', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['updatedAt'])
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.handicapIndex is number
+        && request.resource.data.handicapIndex >= -10
+        && request.resource.data.handicapIndex <= 54
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() >= 1
+        && request.resource.data.displayName.size() <= 100;
+    }
+
+    match /tournaments/{tournamentId} {
+      // Authenticated users can look up tournaments and make bounded list
+      // queries. This is acceptable for the current private four-player app.
+      allow get: if signedIn();
+      allow list: if signedIn()
+        && request.query.limit != null
+        && request.query.limit <= 50;
+
+      // Only global admins create new competitions from the Admin UI.
+      allow create: if admin()
+        && request.resource.data.keys().hasAll([
+          'name', 'startDate', 'endDate', 'createdBy', 'status',
+          'format', 'handicapMode', 'participants', 'participantIds',
+          'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'name', 'startDate', 'endDate', 'createdBy', 'status',
+          'format', 'handicapMode', 'participants', 'participantIds',
+          'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 1
+        && request.resource.data.name.size() <= 100
+        && validDate(request.resource.data.startDate)
+        && validDate(request.resource.data.endDate)
+        && request.resource.data.endDate >= request.resource.data.startDate
+        && request.resource.data.status == 'draft'
+        && request.resource.data.format == 'stableford'
+        && request.resource.data.handicapMode in ['fixed', 'course']
+        && request.resource.data.participants is map
+        && request.resource.data.participants.size() >= 1
+        && request.resource.data.participants.size() <= 4
+        && request.resource.data.participantIds is list
+        && request.resource.data.participantIds.size() >= 1
+        && request.resource.data.participantIds.size() <= 4
+        && request.resource.data.participantIds.toSet()
+          == request.resource.data.participants.keys().toSet()
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // Organiser can touch draft timestamp, start, or finalise.
+      allow update: if signedIn()
+        && resource.data.createdBy == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && (
+          // Draft: update timestamp only.
+          (
+            resource.data.status == 'draft'
+            && request.resource.data.status == 'draft'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['updatedAt'])
+          )
+          ||
+          // Draft -> In progress.
+          (
+            resource.data.status == 'draft'
+            && request.resource.data.status == 'in_progress'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'participantIds', 'startedAt', 'updatedAt'])
+            && request.resource.data.participants is map
+            && request.resource.data.participantIds is list
+            && request.resource.data.participantIds.size() >= 1
+            && request.resource.data.participantIds.size() <= 4
+            && request.resource.data.participantIds.toSet()
+              == resource.data.participants.keys().toSet()
+            && request.resource.data.startedAt == request.time
+          )
+          ||
+          // In progress -> Completed.
+          (
+            resource.data.status == 'in_progress'
+            && request.resource.data.status == 'completed'
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'completedAt', 'updatedAt', 'finalStandings', 'winnerIds'])
+            && request.resource.data.completedAt == request.time
+            && request.resource.data.finalStandings is list
+            && request.resource.data.finalStandings.size()
+              == resource.data.participantIds.size()
+            && request.resource.data.winnerIds is list
+            && request.resource.data.winnerIds.size() >= 1
+            && request.resource.data.winnerIds.size()
+              <= resource.data.participantIds.size()
+            && request.resource.data.participantIds.hasAll(request.resource.data.winnerIds)
+          )
+        );
+
+      allow delete: if false;
+
+      match /rounds/{roundId} {
+        allow get, list: if signedIn();
+
+        allow create: if organiser(tournamentId)
+          && get(tournamentPath(tournamentId)).data.status == 'draft'
+          && request.resource.data.keys().hasAll([
+            'name', 'date', 'courseName', 'status', 'createdAt'
+          ])
+          && request.resource.data.keys().hasOnly([
+            'name', 'date', 'courseName', 'status', 'createdAt'
+          ])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 1
+          && request.resource.data.name.size() <= 80
+          && validDate(request.resource.data.date)
+          && request.resource.data.date
+            >= get(tournamentPath(tournamentId)).data.startDate
+          && request.resource.data.date
+            <= get(tournamentPath(tournamentId)).data.endDate
+          && (
+            request.resource.data.courseName == null
+            || (request.resource.data.courseName is string
+              && request.resource.data.courseName.size() <= 120)
+          )
+          && request.resource.data.status == 'draft'
+          && request.resource.data.createdAt == request.time;
+
+        function verifiedPath(playerId) {
+          return /databases/$(database)/documents/tournaments/$(tournamentId)/rounds/$(roundId)/verifiedScores/$(playerId);
+        }
+
+        function verifiedCardExists(playerId) {
+          return exists(verifiedPath(playerId))
+            && get(verifiedPath(playerId)).data.playerId == playerId
+            && get(verifiedPath(playerId)).data.holes is list
+            && get(verifiedPath(playerId)).data.holes.size() == 18;
+        }
+
+        function allParticipantsVerified() {
+          let ids = get(tournamentPath(tournamentId)).data.participantIds;
+          return ids is list && ids.size() >= 1 && ids.size() <= 4
+            && verifiedCardExists(ids[0])
+            && (ids.size() < 2 || verifiedCardExists(ids[1]))
+            && (ids.size() < 3 || verifiedCardExists(ids[2]))
+            && (ids.size() < 4 || verifiedCardExists(ids[3]));
+        }
+
+        allow update: if organiser(tournamentId)
+          && request.resource.data.updatedAt == request.time
+          && (
+            // Configure an unstarted round's scorecard.
+            (
+              resource.data.status == 'draft'
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['scorecard', 'updatedAt'])
+              && validRoundScorecard(request.resource.data.scorecard)
+            )
+            ||
+            // Configure an unstarted round's ratings.
+            (
+              resource.data.status == 'draft'
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['teeRatings', 'updatedAt'])
+              && validTeeRatings(request.resource.data.teeRatings)
+            )
+            ||
+            // Draft -> In progress.
+            (
+              get(tournamentPath(tournamentId)).data.status == 'in_progress'
+              && resource.data.status == 'draft'
+              && request.resource.data.status == 'in_progress'
+              && validRoundScorecard(request.resource.data.scorecard)
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['status', 'startedAt', 'updatedAt'])
+              && request.resource.data.startedAt == request.time
+            )
+            ||
+            // In progress -> Awaiting verification.
+            (
+              get(tournamentPath(tournamentId)).data.status == 'in_progress'
+              && resource.data.status == 'in_progress'
+              && request.resource.data.status == 'awaiting_verification'
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['status', 'finishedAt', 'updatedAt'])
+              && request.resource.data.finishedAt == request.time
+            )
+            ||
+            // Awaiting verification -> Completed. Official cards become locked.
+            (
+              get(tournamentPath(tournamentId)).data.status == 'in_progress'
+              && resource.data.status == 'awaiting_verification'
+              && request.resource.data.status == 'completed'
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['status', 'completedAt', 'updatedAt'])
+              && request.resource.data.completedAt == request.time
+              && allParticipantsVerified()
+            )
+          );
+
+        allow delete: if false;
+
+        // One independently recorded 18-hole scorecard per (player, recorder).
+        // Clients can only write under their own recorder UID.
+        match /scoreEntries/{entryId} {
+          function roundInProgress() {
+            return get(/databases/$(database)/documents/tournaments/$(tournamentId)/rounds/$(roundId)).data.status == 'in_progress';
+          }
+
+          function entryScoreValid(value) {
+            return value == null || value == 'pickup'
+              || (value is int && value >= 1 && value <= 30);
+          }
+
+          function scoresValid(values) {
+            return values is list && values.size() == 18
+              && entryScoreValid(values[0]) && entryScoreValid(values[1])
+              && entryScoreValid(values[2]) && entryScoreValid(values[3])
+              && entryScoreValid(values[4]) && entryScoreValid(values[5])
+              && entryScoreValid(values[6]) && entryScoreValid(values[7])
+              && entryScoreValid(values[8]) && entryScoreValid(values[9])
+              && entryScoreValid(values[10]) && entryScoreValid(values[11])
+              && entryScoreValid(values[12]) && entryScoreValid(values[13])
+              && entryScoreValid(values[14]) && entryScoreValid(values[15])
+              && entryScoreValid(values[16]) && entryScoreValid(values[17]);
+          }
+
+          function entryIsValid() {
+            return signedIn()
+              && get(tournamentPath(tournamentId)).data.status == 'in_progress'
+              && roundInProgress()
+              && request.resource.data.keys().hasAll([
+                'playerId', 'recordedBy', 'holes', 'createdAt', 'updatedAt'
+              ])
+              && request.resource.data.keys().hasOnly([
+                'playerId', 'recordedBy', 'holes', 'createdAt', 'updatedAt'
+              ])
+              && request.resource.data.recordedBy == request.auth.uid
+              && request.resource.data.playerId is string
+              && entryId == request.resource.data.playerId + '_' + request.auth.uid
+              && request.auth.uid in get(tournamentPath(tournamentId)).data.participantIds
+              && request.resource.data.playerId in get(tournamentPath(tournamentId)).data.participantIds
+              && scoresValid(request.resource.data.holes)
+              && request.resource.data.updatedAt == request.time;
+          }
+
+          // Readable by signed-in members of this tournament only.
+          allow get, list: if signedIn()
+            && (organiser(tournamentId)
+              || request.auth.uid in get(tournamentPath(tournamentId)).data.participantIds);
+
+          allow create: if entryIsValid()
+            && request.resource.data.createdAt == request.time;
+
+          allow update: if entryIsValid()
+            && resource.data.recordedBy == request.auth.uid
+            && resource.data.playerId == request.resource.data.playerId
+            && request.resource.data.createdAt == resource.data.createdAt
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['holes', 'updatedAt']);
+
+          allow delete: if false;
+        }
+        // PLACE THESE TWO MATCH BLOCKS INSIDE match /rounds/{roundId}
+        // alongside match /scoreEntries/{entryId}.
+        function canVerifyRound() {
+          return organiser(tournamentId)
+            && get(/databases/$(database)/documents/tournaments/$(tournamentId)/rounds/$(roundId)).data.status == 'awaiting_verification';
+        }
+        function validVerifiedHole(v) {
+          return v == 'pickup' || (v is int && v >= 1 && v <= 30);
+        }
+        function validVerifiedHoles(v) {
+          return v is list && v.size() == 18
+            && validVerifiedHole(v[0]) && validVerifiedHole(v[1])
+            && validVerifiedHole(v[2]) && validVerifiedHole(v[3])
+            && validVerifiedHole(v[4]) && validVerifiedHole(v[5])
+            && validVerifiedHole(v[6]) && validVerifiedHole(v[7])
+            && validVerifiedHole(v[8]) && validVerifiedHole(v[9])
+            && validVerifiedHole(v[10]) && validVerifiedHole(v[11])
+            && validVerifiedHole(v[12]) && validVerifiedHole(v[13])
+            && validVerifiedHole(v[14]) && validVerifiedHole(v[15])
+            && validVerifiedHole(v[16]) && validVerifiedHole(v[17]);
+        }
+        function officialPath(uid) {
+          return /databases/$(database)/documents/tournaments/$(tournamentId)/rounds/$(roundId)/verifiedScores/$(uid);
+        }
+        function eventPath(eventId) {
+          return /databases/$(database)/documents/tournaments/$(tournamentId)/rounds/$(roundId)/verificationEvents/$(eventId);
+        }
+        function validOfficial(uid) {
+          return canVerifyRound()
+            && request.resource.data.keys().hasAll([
+              'playerId', 'holes', 'verifiedBy', 'verifiedAt', 'revision', 'note', 'eventId'
+            ])
+            && request.resource.data.keys().hasOnly([
+              'playerId', 'holes', 'verifiedBy', 'verifiedAt', 'revision', 'note', 'eventId'
+            ])
+            && uid in get(tournamentPath(tournamentId)).data.participantIds
+            && request.resource.data.playerId == uid
+            && request.resource.data.verifiedBy == request.auth.uid
+            && request.resource.data.verifiedAt == request.time
+            && validVerifiedHoles(request.resource.data.holes)
+            && request.resource.data.note is string
+            && request.resource.data.note.size() <= 500
+            && request.resource.data.eventId is string
+            && getAfter(eventPath(request.resource.data.eventId)).data.eventId
+              == request.resource.data.eventId
+            && getAfter(eventPath(request.resource.data.eventId)).data.playerId == uid
+            && getAfter(eventPath(request.resource.data.eventId)).data.confirmedHoles
+              == request.resource.data.holes;
+        }
+        match /verifiedScores/{playerId} {
+          allow get, list: if signedIn()
+            && (organiser(tournamentId)
+              || request.auth.uid in get(tournamentPath(tournamentId)).data.participantIds);
+          allow create: if validOfficial(playerId)
+            && request.resource.data.revision == 1;
+          allow update: if validOfficial(playerId)
+            && request.resource.data.revision == resource.data.revision + 1
+            && request.resource.data.eventId != resource.data.eventId
+            && (request.resource.data.holes == resource.data.holes
+              || request.resource.data.note.size() > 0);
+          allow delete: if false;
+        }
+        match /verificationEvents/{eventId} {
+          allow get, list: if organiser(tournamentId);
+          allow create: if canVerifyRound()
+            && request.resource.data.keys().hasAll([
+              'playerId', 'eventId', 'previousHoles', 'confirmedHoles', 'verifiedBy', 'verifiedAt', 'note'
+            ])
+            && request.resource.data.keys().hasOnly([
+              'playerId', 'eventId', 'previousHoles', 'confirmedHoles', 'verifiedBy', 'verifiedAt', 'note'
+            ])
+            && eventId == request.resource.data.eventId
+            && request.resource.data.playerId in get(tournamentPath(tournamentId)).data.participantIds
+            && request.resource.data.verifiedBy == request.auth.uid
+            && request.resource.data.verifiedAt == request.time
+            && request.resource.data.note is string
+            && request.resource.data.note.size() <= 500
+            && validVerifiedHoles(request.resource.data.confirmedHoles)
+            && getAfter(officialPath(request.resource.data.playerId)).data.eventId == eventId
+            && getAfter(officialPath(request.resource.data.playerId)).data.holes
+              == request.resource.data.confirmedHoles
+            && (
+              (!exists(officialPath(request.resource.data.playerId))
+                && request.resource.data.previousHoles == null)
+              || (exists(officialPath(request.resource.data.playerId))
+                && request.resource.data.previousHoles == get(officialPath(request.resource.data.playerId)).data.holes)
+            );
+          allow update, delete: if false;
+        }
+
+      }
+    }
+
+    // Everything else is denied until deliberately implemented.
+  }
+}
