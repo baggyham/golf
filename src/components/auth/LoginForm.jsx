@@ -32,10 +32,10 @@ export default function LoginForm() {
             >
                 <div>
                     <h1 className="text-3xl font-bold text-fairway-950">
-                        Fairway
+                        baggygolf
                     </h1>
                     <p className="mt-1 text-sm text-gray-500">
-                        Sign in to your golf account
+                        Sign in
                     </p>
                 </div>
 

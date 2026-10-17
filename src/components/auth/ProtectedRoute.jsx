@@ -6,7 +6,7 @@ export default function ProtectedRoute({ children }) {
     const { user, player, loading } = useAuth();
 
     if (loading) {
-        return <p className="p-6">Loading Fairway...</p>;
+        return <p className="p-6">Loading baggygolf...</p>;
     }
 
     if (!user) {
