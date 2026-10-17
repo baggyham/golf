@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth.js';
 import ChangePassword from '../components/auth/ChangePassword.jsx';
-import AdminOnly from '../components/auth/AdminOnly.jsx';
-import AdminStatus from '../components/admin/AdminStatus.jsx';
 
-export default function AccountPage({ onBack, onOpenAdmin }) {
+export default function AccountPage({ onBack }) {
   const { player } = useAuth();
   const [showPasswordForm, setShowPasswordForm] = useState(false);
 
@@ -43,14 +41,7 @@ export default function AccountPage({ onBack, onOpenAdmin }) {
         {showPasswordForm && <ChangePassword />}
       </section>
 
-      <AdminOnly>
-        <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
-          <h2 className="text-lg font-semibold text-fairway-950">Administration</h2>
-          <p className="text-sm text-gray-500">Tournament setup and management.</p>
-          <button type="button" onClick={onOpenAdmin} className="min-h-11 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-fairway-950 hover:bg-gray-50">Open admin →</button>
-          <AdminStatus />
-        </section>
-      </AdminOnly>
+
     </div>
   );
 }

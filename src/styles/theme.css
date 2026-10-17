@@ -1,0 +1,12 @@
+/* Baggygolf design tokens. Scope the tournament palette; never override app/account UI. */
+.baggy-theme { --bg: #F6F4EB; --surface: #FFFFFF; --surface-soft: #EDF0E8; --ink: #173D30; --muted: #68796C; --line: #E1E6DA; --gold: #987540; --primary: #173D30; --on-primary: #FFFFFF; background: var(--bg); color: var(--ink); color-scheme: light; }
+.baggy-theme[data-appearance="dark"] { --bg: #141E1A; --surface: #223129; --surface-soft: #293B30; --ink: #F4F0E4; --muted: #AFBFB1; --line: #3A4C40; --gold: #D9BA77; --primary: #173D30; --on-primary: #FFFFFF; color-scheme: dark; }
+.baggy-surface { background: var(--surface); border: 1px solid var(--line); color: var(--ink); }
+.baggy-muted { color: var(--muted); }
+.baggy-gold { color: var(--gold); }
+.baggy-hero { background: #173D30; color: white; }
+.baggy-theme[data-appearance="dark"] .baggy-hero { background: #254B39; }
+.tournament-scope { --primary: var(--tournament-primary, #173D30); --gold: var(--tournament-accent, #D9BA77); }
+.tournament-hero { background: var(--primary); color: #FFFFFF; }
+.tournament-accent { color: var(--gold); }
+.baggy-theme button:focus-visible, .baggy-theme a:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }

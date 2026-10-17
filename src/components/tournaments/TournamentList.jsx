@@ -60,7 +60,7 @@ function TournamentCard({ tournament, onOpen }) {
   );
 }
 
-export default function TournamentList({ onSelectTournament }) {
+export default function TournamentList({ onSelectTournament, onCreate }) {
   const { user } = useAuth();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -109,6 +109,13 @@ export default function TournamentList({ onSelectTournament }) {
         </div>
 
       </header>
+
+      <button type="button" onClick={onCreate}
+        className="flex min-h-14 w-full items-center justify-between rounded-xl px-5 py-4 text-left font-semibold text-white shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2"
+        style={{background: 'var(--primary, #173d30)'}}>
+        <span><span className="block">Create tournament</span><span className="mt-1 block text-xs font-normal opacity-80">Organise a competition with up to four players</span></span>
+        <span aria-hidden="true" className="text-2xl">+</span>
+      </button>
 
       {loading && <p className="text-sm text-slate-500">Loading tournaments...</p>}
       {!loading && error && <p role="alert" className="text-sm text-red-600">{error}</p>}

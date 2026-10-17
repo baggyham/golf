@@ -2,7 +2,7 @@ import {useEffect, useState} from 'react';
 import {getAllPlayers} from '../../repositories/playerRepository.js';
 import {createTournament} from '../../repositories/tournamentRepository.js';
 
-export default function CreateTournament({onCreated}) {
+export default function CreateTournament({onCreated, onCancel}) {
     const [name, setName] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -262,6 +262,10 @@ export default function CreateTournament({onCreated}) {
                 </p>
             )}
 
+            <button type="button" onClick={onCancel}
+                className="mr-3 min-h-11 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold">
+                Back to tournaments
+            </button>
             <button
                 type="submit"
                 disabled={saving || loading || Object.keys(selected).length === 0}

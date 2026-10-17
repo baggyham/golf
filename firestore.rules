@@ -74,8 +74,9 @@ service cloud.firestore {
         && request.query.limit != null
         && request.query.limit <= 50;
 
-      // Only global admins create new competitions from the Admin UI.
-      allow create: if admin()
+      // Any authenticated player with a profile may organise a tournament.
+      allow create: if signedIn()
+        && exists(/databases/$(database)/documents/players/$(request.auth.uid))
         && request.resource.data.keys().hasAll([
           'name', 'startDate', 'endDate', 'createdBy', 'status',
           'format', 'handicapMode', 'participants', 'participantIds',

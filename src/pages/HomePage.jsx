@@ -3,150 +3,53 @@ import { useAuth } from '../hooks/useAuth.js';
 import EditHandicap from '../components/players/EditHandicap.jsx';
 import TournamentStandings from '../components/scoring/TournamentStandings.jsx';
 import { getMyTournaments } from '../repositories/tournamentRepository.js';
+import { tournamentTheme } from '../contexts/ThemeContext.jsx';
 
-const LIVE_STATUSES = new Set(['in_progress', 'in-progress', 'active', 'live']);
-const PAST_STATUSES = new Set(['completed', 'finished', 'finalised', 'finalized']);
+const LIVE = new Set(['in_progress', 'in-progress', 'active', 'live']);
+const PAST = new Set(['completed', 'finished', 'finalised', 'finalized']);
+function formatDate(value) { if (!/^\d{4}-\d{2}-\d{2}$/.test(value ?? '')) return 'Date TBC'; return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`)); }
 
-function formatDate(date) {
-  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return 'Date TBC';
-  const [year, month, day] = date.split('-').map(Number);
-  return new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
-  }).format(new Date(Date.UTC(year, month - 1, day)));
-}
-
-export default function HomePage({ onNavigate, onOpenTournament }) {
+export default function HomePage({ onNavigate, onOpenTournament, onActiveTournamentChange, onManageTournament }) {
   const { player, user } = useAuth();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
   useEffect(() => {
-    let active = true;
-
-    if (!user?.uid) {
-      setTournaments([]);
-      setLoading(false);
-      return () => { active = false; };
-    }
-
-    async function load() {
-      setLoading(true);
-      setError('');
-      try {
-        const data = await getMyTournaments(user.uid);
-        if (active) setTournaments(data);
-      } catch (err) {
-        console.error('Home tournament loading failed:', err);
-        if (active) setError('Tournament highlights are unavailable right now.');
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    load();
-    return () => { active = false; };
+    let mounted = true;
+    if (!user?.uid) { setTournaments([]); setLoading(false); return () => { mounted = false; }; }
+    setLoading(true); setError('');
+    getMyTournaments(user.uid).then(data => { if (mounted) setTournaments(data); }).catch(err => { console.error(err); if (mounted) setError('Tournament highlights are unavailable.'); }).finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
   }, [user?.uid]);
-
-  const { current, past } = useMemo(() => {
-    const current = [];
-    const past = [];
-    for (const tournament of tournaments) {
-      const status = String(tournament.status ?? 'draft').toLowerCase();
-      if (LIVE_STATUSES.has(status)) current.push(tournament);
-      if (PAST_STATUSES.has(status)) past.push(tournament);
-    }
-    current.sort((a, b) => (b.startDate ?? '').localeCompare(a.startDate ?? ''));
-    past.sort((a, b) => (b.endDate ?? '').localeCompare(a.endDate ?? ''));
-    return { current, past };
-  }, [tournaments]);
-
+  const { current, past } = useMemo(() => ({
+    current: tournaments.filter(t => LIVE.has(String(t.status ?? '').toLowerCase())).sort((a,b) => (b.startDate ?? '').localeCompare(a.startDate ?? '')),
+    past: tournaments.filter(t => PAST.has(String(t.status ?? '').toLowerCase())).sort((a,b) => (b.endDate ?? '').localeCompare(a.endDate ?? '')),
+  }), [tournaments]);
+  useEffect(() => {
+    // Keep the active tournament while this page remounts/refetches.
+    // Clearing it during loading temporarily switches the bottom nav back to Home.
+    if (loading || error) return;
+    onActiveTournamentChange?.(current[0] ?? null);
+  }, [current, loading, error, onActiveTournamentChange]);
   if (!player) return null;
-
-  return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <header>
-        <p className="text-sm font-semibold uppercase tracking-wider text-fairway-800">Home</p>
-        <h1 className="mt-1 text-2xl font-bold text-fairway-950">Welcome back, {player.displayName}</h1>
-      </header>
-
-      <section className="rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="mb-4 text-lg font-semibold text-fairway-950">Your Handicap Index</h2>
-        <EditHandicap />
-        <p className="mt-3 text-xs text-gray-500">
-          Updating your HI won't change handicap snapshots in existing tournaments.
-        </p>
-      </section>
-
-      <section aria-label="Golf statistics" className="grid grid-cols-3 gap-3">
-        {['Wins', 'Rounds', 'Badges'].map((label) => (
-          <div key={label} className="rounded-xl border border-gray-200 bg-white p-4 text-center">
-            <p className="text-2xl font-bold text-fairway-950">—</p>
-            <p className="mt-1 text-xs text-gray-500">{label}</p>
-          </div>
-        ))}
-      </section>
-
-      {loading && <p className="text-sm text-slate-500">Loading tournament highlights…</p>}
-      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-
-      {!loading && !error && current.length > 0 && (
-        <section aria-labelledby="active-tournaments" className="space-y-3">
-          <h2 id="active-tournaments" className="text-xl font-bold text-fairway-950">Current tournament</h2>
-          {current.map((tournament) => (
-            <article key={tournament.id} className="rounded-xl border border-emerald-200 bg-white p-5">
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-lg font-bold text-fairway-950">{tournament.name}</h3>
-                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900">In progress</span>
-              </div>
-              <p className="mt-2 text-sm text-slate-600">
-                {formatDate(tournament.startDate)} – {formatDate(tournament.endDate)}
-              </p>
-              <TournamentStandings tournament={tournament} onOpenTournament={onOpenTournament} />
-            </article>
-          ))}
-        </section>
-      )}
-
-      {!loading && !error && current.length === 0 && (
-        <section aria-labelledby="past-highlights" className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="past-highlights" className="text-xl font-bold text-fairway-950">Tournament history</h2>
-            <button type="button" onClick={() => onNavigate('tournaments')}
-              className="min-h-11 text-sm font-semibold text-fairway-800">View all →</button>
-          </div>
-          {past.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5">
-              <p className="font-semibold text-fairway-950">Your past competitions will appear here</p>
-              <p className="mt-2 text-sm text-slate-600">
-                Once a tournament is marked as completed, you can revisit it from Home.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {past.slice(0, 3).map((tournament) => (
-                <article key={tournament.id} className="rounded-xl border border-slate-200 bg-white p-5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-fairway-800">Completed tournament</p>
-                  <h3 className="mt-1 text-lg font-bold text-fairway-950">{tournament.name}</h3>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {formatDate(tournament.startDate)} – {formatDate(tournament.endDate)} ·{' '}
-                    {Object.keys(tournament.participants ?? {}).length} players
-                  </p>
-                  <button type="button" onClick={() => onOpenTournament(tournament.id)}
-                    className="mt-3 min-h-11 text-sm font-semibold text-fairway-800">
-                    View tournament →
-                  </button>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {!loading && !error && current.length > 0 && (
-        <button type="button" onClick={() => onNavigate('tournaments')}
-          className="min-h-11 text-sm font-semibold text-fairway-800">Browse all tournaments →</button>
-      )}
-    </div>
-  );
+  if (loading) return <p className="baggy-muted">Loading your clubhouse…</p>;
+  if (current.length) {
+    const tournament = current[0];
+    return <div className="tournament-scope mx-auto max-w-3xl space-y-5" style={tournamentTheme(tournament)}>
+      <header><p className="tournament-accent text-xs font-bold uppercase tracking-[0.2em]">Tournament in progress</p><h1 className="mt-2 text-3xl font-bold">{tournament.name}</h1><p className="baggy-muted mt-1 text-sm">Live cumulative Stableford standings</p></header>
+      {tournament.createdBy === user?.uid && <div className="flex justify-end"><button type="button" onClick={() => onManageTournament(tournament.id)} className="min-h-11 rounded-xl border px-4 py-2 text-sm font-semibold" style={{ borderColor: 'var(--theme-primary, #173d30)', color: 'var(--theme-primary, #173d30)' }}>Manage tournament</button></div>}
+      <section className="tournament-hero rounded-2xl p-5"><div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-semibold">Current standings</h2><span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">LIVE</span></div><TournamentStandings tournament={tournament} showOpenAction={false}/></section>
+      {current.length > 1 && <p className="baggy-muted text-sm">You have {current.length} active tournaments. Browse Tournaments to view the others.</p>}
+      {error && <p role="alert">{error}</p>}
+    </div>;
+  }
+  return <div className="mx-auto max-w-3xl space-y-6">
+    <header><p className="baggy-gold text-xs font-bold uppercase tracking-[0.2em]">The clubhouse</p><h1 className="mt-2 text-3xl font-bold">Good to see you, {player.displayName?.split(' ')[0] || 'golfer'}.</h1><p className="baggy-muted mt-2">Here's how your golf is looking.</p></header>
+    <section aria-label="Your Handicap Index" className="baggy-hero rounded-2xl p-5 sm:p-6"><p className="mb-4 text-xs font-bold uppercase tracking-widest text-white/75">Your Handicap Index</p><div className="[&_button]:text-[#D9BA77] [&_button]:font-bold [&_p]:text-white [&_label]:text-white [&_input]:text-slate-900"><EditHandicap/></div><p className="mt-4 text-xs text-white/70">Changes won't affect handicaps already locked into a tournament.</p></section>
+    <section aria-label="Golf statistics" className="grid grid-cols-3 gap-3">{['Wins','Rounds','Awards'].map(label => <div key={label} className="baggy-surface rounded-2xl p-4 text-center"><p className="text-2xl font-bold">—</p><p className="baggy-muted mt-1 text-xs">{label}</p></div>)}</section>
+    {error && <p role="alert" className="text-red-600">{error}</p>}
+    <section aria-labelledby="history-title"><div className="mb-3 flex items-center justify-between gap-3"><h2 id="history-title" className="text-xl font-bold">Your tournaments</h2><button type="button" onClick={() => onNavigate('tournaments')} className="baggy-gold min-h-11 text-sm font-bold">View all →</button></div>
+      {past.length === 0 ? <div className="baggy-surface rounded-2xl p-5"><p className="font-semibold">Your tournament history starts here</p><p className="baggy-muted mt-2 text-sm">Completed events, champions and memorable rounds will appear here.</p></div> : <div className="space-y-3">{past.slice(0,3).map(t => <article key={t.id} className="baggy-surface rounded-2xl p-5"><p className="baggy-gold text-xs font-bold uppercase tracking-wider">Completed tournament</p><h3 className="mt-1 text-lg font-bold">{t.name}</h3><p className="baggy-muted mt-1 text-sm">{formatDate(t.startDate)} – {formatDate(t.endDate)}</p><button type="button" onClick={() => onOpenTournament(t.id)} className="baggy-gold mt-3 min-h-11 text-sm font-bold">View results →</button></article>)}</div>}
+    </section>
+  </div>;
 }

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTournamentLiveScores } from '../../hooks/useTournamentLiveScores.js';
 import { calculateTournamentLeaderboard } from '../../lib/tournamentLeaderboard.js';
 
-export default function TournamentStandings({ tournament, onOpenTournament }) {
+export default function TournamentStandings({ tournament, onOpenTournament, showOpenAction = true }) {
   const { rounds, loading, error } = useTournamentLiveScores(tournament.id);
   const { rows, calculationError } = useMemo(() => {
     if (loading || error) return { rows: [], calculationError: '' };
@@ -36,7 +36,7 @@ export default function TournamentStandings({ tournament, onOpenTournament }) {
         </div>
       )}
       <p className="text-xs text-slate-500">Completed rounds use organiser-verified scores; active and awaiting-verification rounds use provisional scores. Total includes both. Ties use scored-hole count for display only.</p>
-      <button type="button" onClick={() => onOpenTournament(tournament.id)} className="min-h-11 rounded-lg bg-fairway-950 px-4 text-sm font-semibold text-white">Open tournament / Enter scores →</button>
+      {showOpenAction && onOpenTournament && <button type="button" onClick={() => onOpenTournament(tournament.id)} className="min-h-11 rounded-lg bg-fairway-950 px-4 text-sm font-semibold text-white">Open tournament / Enter scores →</button>}
     </section>
   );
 }

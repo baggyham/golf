@@ -7,9 +7,10 @@ import {
 import AddRound from './rounds/AddRound.jsx';
 import RoundList from './rounds/RoundList.jsx';
 
-export default function TournamentOverview({tournamentId, onBack}) {
+export default function TournamentOverview({tournamentId, onBack, onDraftManagementChange}) {
     const {user} = useAuth();
     const [tournament, setTournament] = useState(null);
+    const [managementSection, setManagementSection] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [starting, setStarting] = useState(false);
@@ -75,6 +76,11 @@ export default function TournamentOverview({tournamentId, onBack}) {
         };
     }, [tournamentId]);
 
+    useEffect(() => {
+        onDraftManagementChange?.(Boolean(tournament && tournament.createdBy === user?.uid && tournament.status === 'draft'));
+        return () => onDraftManagementChange?.(false);
+    }, [onDraftManagementChange, tournament, user?.uid]);
+
     if (loading) {
         return <p>Loading tournament...</p>;
     }
@@ -122,6 +128,17 @@ export default function TournamentOverview({tournamentId, onBack}) {
         tournament.participants ?? {},
     );
 
+    const isDraftManager = isOrganiser && tournament.status === 'draft';
+    // The draft organiser screen replaces main navigation, not the live scoring tabs.
+
+    const configuredRounds = rounds.filter((round) => Boolean(round.scorecard)).length;
+    const allRoundsConfigured = rounds.length > 0 && configuredRounds === rounds.length;
+    const managementSections = [
+        {id: 'tournament-players', title: 'Players', detail: `${participants.length} participants · Handicap snapshots`, icon: '01'},
+        {id: 'tournament-rounds', title: 'Rounds & courses', detail: `${configuredRounds} of ${rounds.length} scorecards configured`, icon: '02'},
+        {id: 'tournament-details', title: 'Tournament settings', detail: 'Format, dates & handicap mode', icon: '03'},
+    ];
+
     return (
         <div className="mx-auto max-w-4xl space-y-6">
             <button
@@ -142,14 +159,44 @@ export default function TournamentOverview({tournamentId, onBack}) {
                 </p>
             </header>
 
-            {isOrganiser && tournament.status === 'draft' && (
-                <section className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+            {isDraftManager && managementSection && (
+                <button type="button" onClick={() => setManagementSection(null)} className="baggy-surface rounded-xl px-4 py-3 text-sm font-semibold">← Back to tournament setup</button>
+            )}
+
+            {isDraftManager && !managementSection && (
+                <section className="space-y-4" aria-label="Draft tournament setup">
+                    <div className="rounded-2xl p-5 text-white" style={{background: 'var(--primary, #173D30)'}}>
+                        <p className="text-xs font-semibold uppercase tracking-widest" style={{color: 'var(--gold, #D9BA77)'}}>Draft tournament</p>
+                        <h2 className="mt-2 text-2xl font-bold">{tournament.name}</h2>
+                        <p className="mt-2 text-sm text-white/80">{participants.length} player{participants.length === 1 ? '' : 's'} · {rounds.length} round{rounds.length === 1 ? '' : 's'}</p>
+                        <p className="mt-2 text-sm text-white/90">
+                            {roundsLoading ? 'Checking round setup…' : roundsError ? 'Could not check round setup' : allRoundsConfigured ? 'All round scorecards configured' : `${configuredRounds} of ${rounds.length} round scorecards configured`}
+                        </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        {managementSections.map((item) => (
+                            <button key={item.id} type="button" onClick={() => setManagementSection(item.id)} className="baggy-surface flex min-h-20 w-full items-center gap-3 rounded-xl p-4 text-left transition hover:opacity-80">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold" style={{background: 'var(--surface-soft, #EDF0E8)', color: 'var(--ink, #173D30)'}}>{item.icon}</span>
+                                <span className="min-w-0 flex-1"><span className="block font-semibold">{item.title}</span><span className="baggy-muted block text-xs">{item.detail}</span></span>
+                                <span aria-hidden="true" className="baggy-muted">→</span>
+                            </button>
+                        ))}
+                        <div className="baggy-surface flex min-h-20 items-center gap-3 rounded-xl p-4 opacity-75">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold" style={{background: 'var(--surface-soft, #EDF0E8)'}}>04</span>
+                            <span className="flex-1"><span className="block font-semibold">Appearance</span><span className="baggy-muted block text-xs">Tournament colours & branding · Coming next</span></span>
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {isOrganiser && tournament.status === 'draft' && !managementSection && (
+                <section className="baggy-surface space-y-3 rounded-xl p-5">
                     <h2 className="font-semibold text-fairway-950">Ready to play?</h2>
                     <p className="text-sm text-slate-700">
-                        Start when your rounds and scorecards are configured. This locks round setup.
+                        Start when your rounds and scorecards are configured. Starting locks round setup.
                     </p>
                     {startError && <p role="alert" className="text-sm text-red-600">{startError}</p>}
-                    <button type="button" disabled={starting || roundsLoading || Boolean(roundsError)}
+                    <button type="button" disabled={starting || roundsLoading || Boolean(roundsError) || !allRoundsConfigured}
                         onClick={handleStart}
                         className="min-h-11 rounded-lg bg-fairway-950 px-5 text-sm font-semibold text-white disabled:opacity-50">
                         {starting ? 'Starting…' : 'Start tournament'}
@@ -191,7 +238,8 @@ export default function TournamentOverview({tournamentId, onBack}) {
                 </section>
             )}
 
-            <section className="rounded-xl border border-gray-200 bg-white p-5">
+            {(!isDraftManager || managementSection === 'tournament-details') && (
+            <section id="tournament-details" className="baggy-surface scroll-mt-24 rounded-xl p-5">
                 <h2 className="mb-4 text-lg font-semibold">
                     Tournament details
                 </h2>
@@ -210,8 +258,10 @@ export default function TournamentOverview({tournamentId, onBack}) {
                     </p>
                 </div>
             </section>
+            )}
 
-            <section className="rounded-xl border border-gray-200 bg-white p-5">
+            {(!isDraftManager || managementSection === 'tournament-players') && (
+            <section id="tournament-players" className="baggy-surface scroll-mt-24 rounded-xl p-5">
                 <h2 className="mb-4 text-lg font-semibold">
                     Players ({participants.length})
                 </h2>
@@ -252,9 +302,11 @@ export default function TournamentOverview({tournamentId, onBack}) {
                     ))}
                 </div>
             </section>
+            )}
 
-            <section className="space-y-4 rounded-xl border border-gray-200 bg-white p-5">
-                <h2 className="text-lg font-semibold text-fairway-950">
+            {(!isDraftManager || managementSection === 'tournament-rounds') && (
+            <section id="tournament-rounds" className="baggy-surface scroll-mt-24 space-y-4 rounded-xl p-5">
+                <h2 className="text-lg font-semibold">
                     Tournament rounds
                 </h2>
 
@@ -279,6 +331,7 @@ export default function TournamentOverview({tournamentId, onBack}) {
                     />
                 )}
             </section>
+            )}
 
         </div>
     );
