@@ -66,6 +66,37 @@ service cloud.firestore {
         && request.resource.data.displayName.size() <= 100;
     }
 
+    function validHandicapEdit(previous, next, mode) {
+      return next is map
+        && previous is map
+        && next.keys().hasAll(['displayName', 'handicapIndexSnapshot', 'fixedPlayingHandicap'])
+        && next.keys().hasOnly(previous.keys())
+        && previous.keys().hasOnly(next.keys())
+        && next.displayName == previous.displayName
+        && (next.handicapIndexSnapshot == null || (
+          next.handicapIndexSnapshot is number
+          && next.handicapIndexSnapshot >= -10
+          && next.handicapIndexSnapshot <= 54
+        ))
+        && (mode != 'course' || next.handicapIndexSnapshot is number)
+        && (mode == 'course' || next.handicapIndexSnapshot == previous.handicapIndexSnapshot)
+        && (mode == 'fixed' || next.fixedPlayingHandicap == previous.fixedPlayingHandicap)
+        && (mode != 'fixed' || (
+          next.fixedPlayingHandicap is int
+          && next.fixedPlayingHandicap >= -10
+          && next.fixedPlayingHandicap <= 54
+        ));
+    }
+
+    function validDraftParticipantsEdit(previous, next) {
+      return next.participantIds == previous.participantIds
+        && next.participants.keys().toSet() == previous.participants.keys().toSet()
+        && validHandicapEdit(previous.participants[previous.participantIds[0]], next.participants[previous.participantIds[0]], previous.handicapMode)
+        && (previous.participantIds.size() < 2 || validHandicapEdit(previous.participants[previous.participantIds[1]], next.participants[previous.participantIds[1]], previous.handicapMode))
+        && (previous.participantIds.size() < 3 || validHandicapEdit(previous.participants[previous.participantIds[2]], next.participants[previous.participantIds[2]], previous.handicapMode))
+        && (previous.participantIds.size() < 4 || validHandicapEdit(previous.participants[previous.participantIds[3]], next.participants[previous.participantIds[3]], previous.handicapMode));
+    }
+
     match /tournaments/{tournamentId} {
       // Authenticated users can look up tournaments and make bounded list
       // queries. This is acceptable for the current private four-player app.
@@ -113,12 +144,13 @@ service cloud.firestore {
         && resource.data.createdBy == request.auth.uid
         && request.resource.data.updatedAt == request.time
         && (
-          // Draft: update timestamp only.
+          // Draft: update timestamp, or edit only participant handicaps.
           (
             resource.data.status == 'draft'
             && request.resource.data.status == 'draft'
             && request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['updatedAt'])
+              .hasOnly(['updatedAt', 'participants'])
+            && validDraftParticipantsEdit(resource.data, request.resource.data)
           )
           ||
           // Draft -> In progress.

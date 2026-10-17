@@ -10,6 +10,7 @@ import {
     query,
     serverTimestamp,
     runTransaction,
+    updateDoc,
     where,
 } from 'firebase/firestore';
 
@@ -298,4 +299,33 @@ export async function completeTournament(tournamentId) {
       winnerIds,
     });
   });
+}
+
+/** Adjust a draft tournament handicap snapshot without changing player profiles. */
+export async function updateDraftParticipantHandicap(tournamentId, playerId, value) {
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Sign in to edit a tournament handicap.');
+    const tournamentRef = doc(db, 'tournaments', tournamentId);
+    const snapshot = await getDoc(tournamentRef);
+    if (!snapshot.exists()) throw new Error('Tournament not found.');
+    const tournament = snapshot.data();
+    if (tournament.createdBy !== currentUser.uid || tournament.status !== 'draft') {
+        throw new Error('Only the organiser can edit draft handicaps.');
+    }
+    if (!Object.prototype.hasOwnProperty.call(tournament.participants ?? {}, playerId)) {
+        throw new Error('Player is not in this tournament.');
+    }
+    const fixed = tournament.handicapMode === 'fixed';
+    if (!Number.isFinite(value) || value < -10 || value > 54 || (fixed && !Number.isInteger(value))) {
+        throw new Error(fixed ? 'Playing Handicap must be a whole number from -10 to 54.' : 'Handicap Index must be between -10 and 54.');
+    }
+    const participants = {
+        ...tournament.participants,
+        [playerId]: {
+            ...tournament.participants[playerId],
+            [fixed ? 'fixedPlayingHandicap' : 'handicapIndexSnapshot']: value,
+        },
+    };
+    await updateDoc(tournamentRef, {participants, updatedAt: serverTimestamp()});
+    return participants;
 }

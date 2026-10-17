@@ -1,6 +1,6 @@
 import {useEffect, useState, useCallback} from 'react';
 import {useAuth} from '../../hooks/useAuth.js';
-import {getTournament, startTournament, completeTournament} from '../../repositories/tournamentRepository.js';
+import {getTournament, startTournament, completeTournament, updateDraftParticipantHandicap} from '../../repositories/tournamentRepository.js';
 import {
     getTournamentRounds,
 } from '../../repositories/roundRepository.js';
@@ -20,6 +20,10 @@ export default function TournamentOverview({tournamentId, onBack, onDraftManagem
     const [rounds, setRounds] = useState([]);
     const [roundsLoading, setRoundsLoading] = useState(true);
     const [roundsError, setRoundsError] = useState('');
+    const [editingPlayerId, setEditingPlayerId] = useState(null);
+    const [handicapDraft, setHandicapDraft] = useState('');
+    const [handicapError, setHandicapError] = useState('');
+    const [savingHandicap, setSavingHandicap] = useState(false);
 
     const loadRounds = useCallback(async () => {
         if (!tournamentId) return;
@@ -122,6 +126,34 @@ export default function TournamentOverview({tournamentId, onBack, onDraftManagem
         }
     }
 
+    async function saveHandicap(playerId) {
+        const fixed = tournament.handicapMode === 'fixed';
+        const text = handicapDraft.trim();
+        const value = Number(text);
+        if (!text || !Number.isFinite(value) || value < -10 || value > 54 || (fixed && !Number.isInteger(value))) {
+            setHandicapError(fixed ? 'Enter a whole number from -10 to 54.' : 'Enter a number from -10 to 54.');
+            return;
+        }
+        setSavingHandicap(true);
+        setHandicapError('');
+        try {
+            const participants = await updateDraftParticipantHandicap(tournamentId, playerId, value);
+            setTournament((prev) => ({...prev, participants}));
+            setEditingPlayerId(null);
+        } catch (err) {
+            setHandicapError(err.message || 'Could not update handicap.');
+        } finally {
+            setSavingHandicap(false);
+        }
+    }
+
+    function beginHandicapEdit(playerId, player) {
+        const current = tournament.handicapMode === 'fixed' ? player.fixedPlayingHandicap : player.handicapIndexSnapshot;
+        setEditingPlayerId(playerId);
+        setHandicapDraft(current == null ? '' : String(current));
+        setHandicapError('');
+    }
+
     const isOrganiser = tournament.createdBy === user?.uid;
 
     const participants = Object.entries(
@@ -134,205 +166,171 @@ export default function TournamentOverview({tournamentId, onBack, onDraftManagem
     const configuredRounds = rounds.filter((round) => Boolean(round.scorecard)).length;
     const allRoundsConfigured = rounds.length > 0 && configuredRounds === rounds.length;
     const managementSections = [
-        {id: 'tournament-players', title: 'Players', detail: `${participants.length} participants · Handicap snapshots`, icon: '01'},
-        {id: 'tournament-rounds', title: 'Rounds & courses', detail: `${configuredRounds} of ${rounds.length} scorecards configured`, icon: '02'},
-        {id: 'tournament-details', title: 'Tournament settings', detail: 'Format, dates & handicap mode', icon: '03'},
+        {id: 'tournament-players', title: 'Players', detail: `${participants.length} selected`, icon: '01'},
+        {id: 'tournament-rounds', title: 'Rounds & courses', detail: roundsLoading ? 'Loading rounds…' : `${configuredRounds} / ${rounds.length} configured`, icon: '02'},
+        {id: 'tournament-details', title: 'Tournament settings', detail: 'Dates, format & handicap', icon: '03'},
     ];
+    const isDraftHome = isDraftManager && !managementSection;
+    const sectionTitle = managementSections.find((item) => item.id === managementSection)?.title;
 
     return (
-        <div className="mx-auto max-w-4xl space-y-6">
-            <button
-                type="button"
-                onClick={onBack}
-                className="text-sm font-medium text-fairway-800"
-            >
-                ← Back to tournaments
-            </button>
+        <div className="mx-auto max-w-3xl space-y-4 pb-8">
+            <div className="flex items-center justify-between gap-3">
+                <button
+                    type="button"
+                    onClick={() => isDraftManager && managementSection ? setManagementSection(null) : onBack?.()}
+                    className="min-h-11 text-sm font-semibold" style={{color: 'var(--ink)'}}
+                >
+                    ← {isDraftManager && managementSection ? 'Tournament setup' : 'Tournaments'}
+                </button>
+                {isDraftManager && managementSection && <span className="baggy-muted text-xs">DRAFT SETUP</span>}
+            </div>
 
-            <header>
-                <h1 className="text-2xl font-bold text-fairway-950">
-                    {tournament.name}
-                </h1>
-
-                <p className="mt-1 text-sm text-gray-500">
-                    {tournament.startDate} — {tournament.endDate}
-                </p>
-            </header>
-
-            {isDraftManager && managementSection && (
-                <button type="button" onClick={() => setManagementSection(null)} className="baggy-surface rounded-xl px-4 py-3 text-sm font-semibold">← Back to tournament setup</button>
-            )}
-
-            {isDraftManager && !managementSection && (
-                <section className="space-y-4" aria-label="Draft tournament setup">
-                    <div className="rounded-2xl p-5 text-white" style={{background: 'var(--primary, #173D30)'}}>
-                        <p className="text-xs font-semibold uppercase tracking-widest" style={{color: 'var(--gold, #D9BA77)'}}>Draft tournament</p>
-                        <h2 className="mt-2 text-2xl font-bold">{tournament.name}</h2>
-                        <p className="mt-2 text-sm text-white/80">{participants.length} player{participants.length === 1 ? '' : 's'} · {rounds.length} round{rounds.length === 1 ? '' : 's'}</p>
-                        <p className="mt-2 text-sm text-white/90">
-                            {roundsLoading ? 'Checking round setup…' : roundsError ? 'Could not check round setup' : allRoundsConfigured ? 'All round scorecards configured' : `${configuredRounds} of ${rounds.length} round scorecards configured`}
-                        </p>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        {managementSections.map((item) => (
-                            <button key={item.id} type="button" onClick={() => setManagementSection(item.id)} className="baggy-surface flex min-h-20 w-full items-center gap-3 rounded-xl p-4 text-left transition hover:opacity-80">
-                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold" style={{background: 'var(--surface-soft, #EDF0E8)', color: 'var(--ink, #173D30)'}}>{item.icon}</span>
-                                <span className="min-w-0 flex-1"><span className="block font-semibold">{item.title}</span><span className="baggy-muted block text-xs">{item.detail}</span></span>
-                                <span aria-hidden="true" className="baggy-muted">→</span>
+            {isDraftManager ? (
+                <>
+                    <section className="tournament-hero rounded-2xl px-5 py-5" aria-label="Tournament status">
+                        <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-bold uppercase tracking-widest" style={{color: 'var(--gold)'}}>Draft tournament</p>
+                            <span className="rounded-full border border-white/30 px-2.5 py-1 text-xs">{participants.length} players</span>
+                        </div>
+                        <h1 className="mt-2 text-2xl font-bold leading-tight">{tournament.name}</h1>
+                        <p className="mt-1 text-sm text-white/75">{tournament.startDate} — {tournament.endDate}</p>
+                        <div className="mt-4 flex items-center gap-2 border-t border-white/20 pt-3 text-sm">
+                            <span aria-hidden="true" style={{color: 'var(--gold)'}}>●</span>
+                            <span>{roundsLoading ? 'Checking rounds…' : roundsError ? 'Unable to check rounds' : allRoundsConfigured ? 'All rounds configured' : `${configuredRounds} of ${rounds.length} rounds configured`}</span>
+                        </div>
+                    </section>
+                    {isDraftHome ? (
+                        <>
+                            <section className="space-y-2" aria-label="Configure tournament">
+                                <h2 className="px-1 text-base font-bold">Tournament setup</h2>
+                                {managementSections.map((item) => (
+                                    <button key={item.id} type="button" onClick={() => setManagementSection(item.id)}
+                                        className="baggy-surface flex min-h-18 w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition hover:opacity-80">
+                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xs font-bold"
+                                            style={{background: 'var(--surface-soft)', color: 'var(--ink)'}}>{item.icon}</span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block font-semibold">{item.title}</span>
+                                            <span className="baggy-muted block text-xs">{item.detail}</span>
+                                        </span>
+                                        <span className="baggy-muted" aria-hidden="true">›</span>
+                                    </button>
+                                ))}
+                            </section>
+                            <section className="baggy-surface rounded-xl p-4">
+                                {startError && <p role="alert" className="mb-3 text-sm text-red-600">{startError}</p>}
+                                <button type="button" disabled={starting || roundsLoading || Boolean(roundsError) || !allRoundsConfigured}
+                                    onClick={handleStart}
+                                    className="min-h-12 w-full rounded-lg px-4 text-sm font-bold disabled:opacity-50"
+                                    style={{background: 'var(--primary)', color: 'var(--on-primary)'}}>
+                                    {starting ? 'Starting…' : 'Start tournament'}
+                                </button>
+                                {!allRoundsConfigured && <p className="baggy-muted mt-2 text-center text-xs">Configure every round to enable starting.</p>}
+                            </section>
+                        </>
+                    ) : (
+                        <section className="baggy-surface rounded-xl p-4 sm:p-5" aria-label={sectionTitle}>
+                            <h2 className="mb-4 text-lg font-bold">{sectionTitle}</h2>
+                            {managementSection === 'tournament-details' && (
+                                <dl className="space-y-3 text-sm">
+                                    {[
+                                        ['Status', 'Draft'],
+                                        ['Start date', tournament.startDate],
+                                        ['End date', tournament.endDate],
+                                        ['Format', tournament.format],
+                                        ['Handicap mode', tournament.handicapMode === 'fixed' ? 'Fixed Playing Handicap' : 'Course Handicap'],
+                                    ].map(([name, value]) => (
+                                        <div key={name} className="flex justify-between gap-4 border-b pb-2" style={{borderColor: 'var(--line)'}}>
+                                            <dt className="baggy-muted">{name}</dt><dd className="text-right font-semibold">{value}</dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            )}
+                            {managementSection === 'tournament-players' && (
+                                <div className="space-y-2">
+                                    {participants.map(([id, player]) => {
+                                        const fixed = tournament.handicapMode === 'fixed';
+                                        const current = fixed ? player.fixedPlayingHandicap : player.handicapIndexSnapshot;
+                                        const editing = editingPlayerId === id;
+                                        return (
+                                            <div key={id} className="border-b py-2" style={{borderColor: 'var(--line)'}}>
+                                                <div className="flex min-h-12 items-center justify-between gap-2">
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate font-semibold">{player.displayName}</p>
+                                                        <p className="baggy-muted text-xs">{fixed ? `Starting HI ${player.handicapIndexSnapshot ?? '—'}` : 'Tournament HI snapshot'}</p>
+                                                    </div>
+                                                    {editing ? (
+                                                        <div className="flex shrink-0 items-center gap-1">
+                                                            <input aria-label={`Handicap for ${player.displayName}`} type="number" inputMode="decimal" step={fixed ? '1' : '0.1'} min="-10" max="54"
+                                                                value={handicapDraft} onChange={(e) => setHandicapDraft(e.target.value)} disabled={savingHandicap}
+                                                                onKeyDown={(e) => {if (e.key === 'Enter') saveHandicap(id); if (e.key === 'Escape') setEditingPlayerId(null);}}
+                                                                className="w-14 rounded-md border px-1 py-2 text-center text-sm" style={{background:'var(--surface)', borderColor:'var(--line)', color:'var(--ink)'}}/>
+                                                            <button type="button" onClick={() => saveHandicap(id)} disabled={savingHandicap} aria-label="Confirm handicap" className="flex h-9 w-9 items-center justify-center rounded-md font-bold" style={{color:'var(--primary)'}}>✓</button>
+                                                            <button type="button" onClick={() => {setEditingPlayerId(null); setHandicapError('');}} disabled={savingHandicap} aria-label="Cancel handicap edit" className="flex h-9 w-9 items-center justify-center rounded-md">✕</button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex shrink-0 items-center gap-1">
+                                                            <div className="text-right"><p className="font-bold">{current ?? '—'}</p><p className="baggy-muted text-[10px]">{fixed ? 'Playing HCP' : 'HI'}</p></div>
+                                                            <button type="button" onClick={() => beginHandicapEdit(id, player)} aria-label={`Edit handicap for ${player.displayName}`}
+                                                                className="flex h-9 w-9 items-center justify-center rounded-lg" style={{color:'var(--ink)'}}>✎</button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {editing && handicapError && <p role="alert" className="mt-1 text-xs text-red-600">{handicapError}</p>}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            {managementSection === 'tournament-rounds' && (
+                                <div className="space-y-5">
+                                    {roundsLoading ? <p className="baggy-muted text-sm">Loading rounds…</p> : roundsError ?
+                                        <div role="alert" className="space-y-2 text-sm text-red-600"><p>{roundsError}</p><button type="button" onClick={loadRounds} className="underline">Retry</button></div> :
+                                        <RoundList rounds={rounds} tournament={tournament} onScorecardSaved={loadRounds}/>}
+                                    <AddRound tournament={tournament} onCreated={loadRounds}/>
+                                </div>
+                            )}
+                        </section>
+                    )}
+                </>
+            ) : (
+                <>
+                    <header className="space-y-1">
+                        <h1 className="text-2xl font-bold">{tournament.name}</h1>
+                        <p className="baggy-muted text-sm">{tournament.startDate} — {tournament.endDate} · {tournament.status.replaceAll('_', ' ')}</p>
+                    </header>
+                    {isOrganiser && tournament.status === 'in_progress' && (
+                        <section className="baggy-surface space-y-3 rounded-xl p-4">
+                            <h2 className="font-bold">Finish competition</h2>
+                            <p className="baggy-muted text-sm">Every round must be verified and completed first.</p>
+                            {completeError && <p role="alert" className="text-sm text-red-600">{completeError}</p>}
+                            <button type="button" disabled={completing || roundsLoading || Boolean(roundsError)} onClick={handleComplete}
+                                className="min-h-11 rounded-lg px-4 text-sm font-semibold disabled:opacity-50"
+                                style={{background: 'var(--primary)', color: 'var(--on-primary)'}}>
+                                {completing ? 'Completing…' : 'Complete tournament'}
                             </button>
-                        ))}
-                        <div className="baggy-surface flex min-h-20 items-center gap-3 rounded-xl p-4 opacity-75">
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-bold" style={{background: 'var(--surface-soft, #EDF0E8)'}}>04</span>
-                            <span className="flex-1"><span className="block font-semibold">Appearance</span><span className="baggy-muted block text-xs">Tournament colours & branding · Coming next</span></span>
-                        </div>
-                    </div>
-                </section>
+                        </section>
+                    )}
+                    {tournament.status === 'completed' && Array.isArray(tournament.finalStandings) && (
+                        <section className="baggy-surface rounded-xl p-4">
+                            <h2 className="mb-3 font-bold">Final results</h2>
+                            <ol className="space-y-2">
+                                {tournament.finalStandings.map((row) => (
+                                    <li key={row.playerId} className="flex justify-between gap-3 text-sm">
+                                        <span>{row.position}. {row.displayName}</span><strong>{row.totalPoints} pts</strong>
+                                    </li>
+                                ))}
+                            </ol>
+                        </section>
+                    )}
+                    <section className="baggy-surface rounded-xl p-4">
+                        <h2 className="mb-3 font-bold">Tournament rounds</h2>
+                        {roundsLoading ? <p className="baggy-muted text-sm">Loading rounds…</p> : roundsError ?
+                            <p role="alert" className="text-sm text-red-600">{roundsError}</p> :
+                            <RoundList rounds={rounds} tournament={tournament} onScorecardSaved={loadRounds}/>}
+                    </section>
+                </>
             )}
-
-            {isOrganiser && tournament.status === 'draft' && !managementSection && (
-                <section className="baggy-surface space-y-3 rounded-xl p-5">
-                    <h2 className="font-semibold text-fairway-950">Ready to play?</h2>
-                    <p className="text-sm text-slate-700">
-                        Start when your rounds and scorecards are configured. Starting locks round setup.
-                    </p>
-                    {startError && <p role="alert" className="text-sm text-red-600">{startError}</p>}
-                    <button type="button" disabled={starting || roundsLoading || Boolean(roundsError) || !allRoundsConfigured}
-                        onClick={handleStart}
-                        className="min-h-11 rounded-lg bg-fairway-950 px-5 text-sm font-semibold text-white disabled:opacity-50">
-                        {starting ? 'Starting…' : 'Start tournament'}
-                    </button>
-                </section>
-            )}
-
-            {isOrganiser && tournament.status === 'in_progress' && (
-                <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
-                    <h2 className="font-semibold">Finish competition</h2>
-                    <p className="text-sm text-gray-600">
-                        All rounds must be completed and all players verified before finalising.
-                    </p>
-                    {completeError && <p role="alert" className="text-sm text-red-600">{completeError}</p>}
-                    <button type="button" disabled={completing || roundsLoading || Boolean(roundsError)}
-                        onClick={handleComplete}
-                        className="min-h-11 rounded-lg bg-fairway-950 px-5 text-sm font-semibold text-white disabled:opacity-50">
-                        {completing ? 'Completing…' : 'Complete tournament'}
-                    </button>
-                </section>
-            )}
-
-            {tournament.status === 'completed' && Array.isArray(tournament.finalStandings) && (
-                <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
-                    <h2 className="text-lg font-semibold">Final results</h2>
-                    <p className="text-sm text-gray-600">
-                        Winner{tournament.winnerIds?.length === 1 ? '' : 's'}: {' '}
-                        {tournament.finalStandings.filter((row) => row.position === 1)
-                            .map((row) => row.displayName).join(', ')}
-                    </p>
-                    <ol className="space-y-2">
-                        {tournament.finalStandings.map((row) => (
-                            <li key={row.playerId} className="flex justify-between gap-4 text-sm">
-                                <span>{row.position}. {row.displayName}</span>
-                                <strong>{row.totalPoints} pts</strong>
-                            </li>
-                        ))}
-                    </ol>
-                </section>
-            )}
-
-            {(!isDraftManager || managementSection === 'tournament-details') && (
-            <section id="tournament-details" className="baggy-surface scroll-mt-24 rounded-xl p-5">
-                <h2 className="mb-4 text-lg font-semibold">
-                    Tournament details
-                </h2>
-
-                <div className="space-y-2 text-sm">
-                    <p>Status: {tournament.status}</p>
-                    <p>Format: {tournament.format}</p>
-                    <p>
-                        Handicap mode:{' '}
-                        {tournament.handicapMode === 'fixed'
-                            ? 'Fixed Playing Handicap'
-                            : 'Course Handicap'}
-                    </p>
-                    <p>
-                        Your role: {isOrganiser ? 'Organiser' : 'Player'}
-                    </p>
-                </div>
-            </section>
-            )}
-
-            {(!isDraftManager || managementSection === 'tournament-players') && (
-            <section id="tournament-players" className="baggy-surface scroll-mt-24 rounded-xl p-5">
-                <h2 className="mb-4 text-lg font-semibold">
-                    Players ({participants.length})
-                </h2>
-
-                <div className="space-y-3">
-                    {participants.map(([playerId, player]) => (
-                        <div
-                            key={playerId}
-                            className="flex items-center justify-between border-b border-gray-100 pb-3"
-                        >
-                            <div>
-                                <p className="font-medium">
-                                    {player.displayName}
-                                </p>
-
-                                <p className="text-xs text-gray-500">
-                                    Starting HI: {player.handicapIndexSnapshot ?? '—'}
-                                </p>
-                            </div>
-
-                            <div className="text-right">
-                                {tournament.handicapMode === 'fixed' ? (
-                                    <>
-                                        <p className="font-semibold">
-                                            {player.fixedPlayingHandicap}
-                                        </p>
-                                        <p className="text-xs text-gray-500">
-                                            Playing Handicap
-                                        </p>
-                                    </>
-                                ) : (
-                                    <p className="text-sm text-gray-500">
-                                        Calculated per round
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-            )}
-
-            {(!isDraftManager || managementSection === 'tournament-rounds') && (
-            <section id="tournament-rounds" className="baggy-surface scroll-mt-24 space-y-4 rounded-xl p-5">
-                <h2 className="text-lg font-semibold">
-                    Tournament rounds
-                </h2>
-
-                {roundsLoading ? (
-                    <p className="text-sm text-gray-500">Loading rounds...</p>
-                ) : roundsError ? (
-                    <p role="alert" className="text-sm text-red-600">
-                        {roundsError}
-                    </p>
-                ) : (
-                    <RoundList
-                        rounds={rounds}
-                        tournament={tournament}
-                        onScorecardSaved={loadRounds}
-                    />
-                )}
-
-                {isOrganiser && tournament.status === 'draft' && (
-                    <AddRound
-                        tournament={tournament}
-                        onCreated={loadRounds}
-                    />
-                )}
-            </section>
-            )}
-
         </div>
     );
 }

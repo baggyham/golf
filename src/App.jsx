@@ -25,7 +25,7 @@ export default function App() {
   }
 
   return (
-    <AppShell activePage={activePage} onNavigate={navigate} activeTournament={activeTournament} hideNavigation={activePage === 'createTournament' || activePage === 'tournamentOverview'} hideHeader={activePage === 'createTournament'}>
+    <AppShell activePage={activePage} onNavigate={navigate} activeTournament={activeTournament} hideNavigation={activePage === 'createTournament' || activePage === 'tournamentOverview'} hideHeader={activePage === 'createTournament' || (activePage === 'tournamentOverview' && draftManagementOpen)}>
       {activePage === 'home' && <HomePage
         onActiveTournamentChange={onActiveTournamentChange}
         onNavigate={navigate}
