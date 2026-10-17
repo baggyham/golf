@@ -35,7 +35,7 @@ export default function App() {
           setActivePage('tournamentOverview');
         }}
       />}
-      {activePage === 'profile' && <AccountPage onBack={() => navigate('home')} />}
+      {activePage === 'profile' && <AccountPage onBack={() => navigate('home')} onOpenTournament={(id) => { setSelectedTournamentId(id); setActivePage('tournamentOverview'); }} />}
 
 
       {activePage === 'tournaments' && (

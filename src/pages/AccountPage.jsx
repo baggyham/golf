@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth.js';
 import ChangePassword from '../components/auth/ChangePassword.jsx';
+import CareerShowcase from '../components/profile/CareerShowcase.jsx';
 
-export default function AccountPage({ onBack }) {
-  const { player } = useAuth();
+export default function AccountPage({ onBack, onOpenTournament }) {
+  const { player, user } = useAuth();
   const [showPasswordForm, setShowPasswordForm] = useState(false);
 
   if (!player) return null;
@@ -29,6 +30,8 @@ export default function AccountPage({ onBack }) {
           </div>
         </dl>
       </section>
+
+      <CareerShowcase playerId={user?.uid} onOpenTournament={onOpenTournament} expanded />
 
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-4">
