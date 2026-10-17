@@ -6,11 +6,14 @@ import {
 } from '../../repositories/roundRepository.js';
 import AddRound from './rounds/AddRound.jsx';
 import RoundList from './rounds/RoundList.jsx';
+import FinalTournamentResults from './FinalTournamentResults.jsx';
+import HistoricalRoundScorecard from './HistoricalRoundScorecard.jsx';
 
 export default function TournamentOverview({tournamentId, onBack, onDraftManagementChange}) {
     const {user} = useAuth();
     const [tournament, setTournament] = useState(null);
     const [managementSection, setManagementSection] = useState(null);
+    const [historicalRoundId, setHistoricalRoundId] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [starting, setStarting] = useState(false);
@@ -311,24 +314,27 @@ export default function TournamentOverview({tournamentId, onBack, onDraftManagem
                             </button>
                         </section>
                     )}
-                    {tournament.status === 'completed' && Array.isArray(tournament.finalStandings) && (
-                        <section className="baggy-surface rounded-xl p-4">
-                            <h2 className="mb-3 font-bold">Final results</h2>
-                            <ol className="space-y-2">
-                                {tournament.finalStandings.map((row) => (
-                                    <li key={row.playerId} className="flex justify-between gap-3 text-sm">
-                                        <span>{row.position}. {row.displayName}</span><strong>{row.totalPoints} pts</strong>
-                                    </li>
-                                ))}
-                            </ol>
-                        </section>
-                    )}
-                    <section className="baggy-surface rounded-xl p-4">
+                    {tournament.status === 'completed' && (historicalRoundId ? (
+                        <HistoricalRoundScorecard key={historicalRoundId} tournament={tournament} round={rounds.find(r => r.id === historicalRoundId)} onBack={() => setHistoricalRoundId(null)} />
+                    ) : (
+                        <>
+                          <FinalTournamentResults tournament={tournament} rounds={rounds} />
+                          <section className="baggy-surface rounded-2xl p-4 sm:p-5" aria-label="Historical scorecards">
+                            <h2 className="text-lg font-bold">Official scorecards</h2>
+                            <div className="mt-3 space-y-2">{rounds.filter(r => r.status === 'completed').map(round => (
+                              <button type="button" key={round.id} onClick={() => setHistoricalRoundId(round.id)} className="flex min-h-14 w-full items-center justify-between gap-3 rounded-xl border px-3 py-3 text-left" style={{borderColor:'var(--line)'}}>
+                                <span><span className="block font-semibold">{round.name}</span><span className="baggy-muted block text-xs">{round.courseName || 'View verified scores'} · {round.date}</span></span><span aria-hidden="true">›</span>
+                              </button>
+                            ))}</div>
+                          </section>
+                        </>
+                    ))}
+                    {!historicalRoundId && <section className="baggy-surface rounded-xl p-4">
                         <h2 className="mb-3 font-bold">Tournament rounds</h2>
                         {roundsLoading ? <p className="baggy-muted text-sm">Loading rounds…</p> : roundsError ?
                             <p role="alert" className="text-sm text-red-600">{roundsError}</p> :
                             <RoundList rounds={rounds} tournament={tournament} onScorecardSaved={loadRounds}/>}
-                    </section>
+                    </section>}
                 </>
             )}
         </div>

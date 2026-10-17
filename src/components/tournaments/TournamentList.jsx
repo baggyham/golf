@@ -24,37 +24,48 @@ function formatDate(date) {
   }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
-function TournamentCard({ tournament, onOpen }) {
+function TournamentCard({ tournament, onOpen, userId }) {
   const playerCount = Object.keys(tournament.participants ?? {}).length;
   const label = String(tournament.status || 'draft').replaceAll('_', ' ');
+  const completed = sectionFor(tournament) === 'past';
+  const standings = Array.isArray(tournament.finalStandings) ? tournament.finalStandings : [];
+  const myResult = standings.find(row => row.playerId === userId);
+  const champion = (tournament.winnerIds || []).includes(userId);
+  const winners = standings.filter(row => row.position === 1).map(row => row.displayName);
+
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <article className={`baggy-surface rounded-2xl p-4 sm:p-5 ${completed && champion ? "border-2" : ""}`} style={completed && champion ? {borderColor: "var(--gold)"} : undefined}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="break-words text-base font-bold text-fairway-950 sm:text-lg">
+          <h3 className="break-words text-base font-bold sm:text-lg">
             {tournament.name || 'Untitled tournament'}
           </h3>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 baggy-muted text-sm">
             {formatDate(tournament.startDate)} – {formatDate(tournament.endDate)}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium capitalize text-slate-700">
+        <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium capitalize">
           {label}
         </span>
       </div>
 
-      <p className="mt-3 text-sm text-slate-600">
+      <p className="mt-3 baggy-muted text-sm">
         {playerCount} {playerCount === 1 ? 'player' : 'players'} ·{' '}
         {tournament.handicapMode === 'fixed' ? 'Fixed handicap' : 'Course handicap'}
       </p>
 
+      {completed && <div className="mt-3 border-t pt-3" style={{borderColor: 'var(--line)'}}>
+        <p className="baggy-gold text-xs font-bold uppercase tracking-wide">{champion ? '🏆 Your championship' : winners.length ? `Champion: ${winners.join(' & ')}` : 'Final results'}</p>
+        {myResult && <div className="mt-2 flex items-center justify-between gap-3"><span className="text-sm">Your finish: <strong>{myResult.position === 1 ? '1st' : myResult.position === 2 ? '2nd' : myResult.position === 3 ? '3rd' : `${myResult.position}th`}</strong></span><strong className="tabular-nums">{myResult.totalPoints} pts</strong></div>}
+      </div>}
       <button
         type="button"
         onClick={() => onOpen(tournament.id)}
-        className="mt-4 min-h-11 w-full rounded-lg bg-fairway-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-fairway-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fairway-950 sm:w-auto"
+        className="mt-4 min-h-11 w-full rounded-lg px-4 py-2.5 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 sm:w-auto"
+        style={{background: 'var(--primary)', color: 'var(--on-primary)'}}
       >
-        Open tournament →
+        {completed ? "View results & scorecards →" : "Open tournament →"}
       </button>
     </article>
   );
@@ -105,7 +116,7 @@ export default function TournamentList({ onSelectTournament, onCreate }) {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-fairway-950">Tournaments</h1>
-          <p className="mt-1 text-sm text-slate-500">Your competitions, all in one place.</p>
+          <p className="mt-1 baggy-muted text-sm">Your competitions, all in one place.</p>
         </div>
 
       </header>
@@ -117,7 +128,7 @@ export default function TournamentList({ onSelectTournament, onCreate }) {
         <span aria-hidden="true" className="text-2xl">+</span>
       </button>
 
-      {loading && <p className="text-sm text-slate-500">Loading tournaments...</p>}
+      {loading && <p className="baggy-muted text-sm">Loading tournaments...</p>}
       {!loading && error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
       {!loading && !error && SECTIONS.map((section) => (
@@ -131,7 +142,7 @@ export default function TournamentList({ onSelectTournament, onCreate }) {
             </span>
           </div>
           {grouped[section.id].length === 0 ? (
-            <p className="rounded-xl border border-dashed border-slate-200 px-4 py-5 text-sm text-slate-500">
+            <p className="rounded-xl border border-dashed border-slate-200 px-4 py-5 baggy-muted text-sm">
               {section.empty}
             </p>
           ) : (
@@ -141,6 +152,7 @@ export default function TournamentList({ onSelectTournament, onCreate }) {
                   key={tournament.id}
                   tournament={tournament}
                   onOpen={onSelectTournament}
+                  userId={user.uid}
                 />
               ))}
             </div>
