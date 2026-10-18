@@ -1,3 +1,5 @@
+import { tournamentTheme } from '../../contexts/ThemeContext.jsx';
+import { tournamentTier, majorThemeById } from '../../lib/majorThemes.js';
 import {useEffect, useState, useCallback} from 'react';
 import {useAuth} from '../../hooks/useAuth.js';
 import {getTournament, startTournament, completeTournament, updateDraftParticipantHandicap} from '../../repositories/tournamentRepository.js';
@@ -177,7 +179,7 @@ export default function TournamentOverview({tournamentId, onBack, onDraftManagem
     const sectionTitle = managementSections.find((item) => item.id === managementSection)?.title;
 
     return (
-        <div className="mx-auto max-w-3xl space-y-4 pb-8">
+        <div className="tournament-scope mx-auto max-w-3xl space-y-4 pb-8" style={tournamentTheme(tournament)}>
             <div className="flex items-center justify-between gap-3">
                 <button
                     type="button"
@@ -196,6 +198,7 @@ export default function TournamentOverview({tournamentId, onBack, onDraftManagem
                             <p className="text-xs font-bold uppercase tracking-widest" style={{color: 'var(--gold)'}}>Draft tournament</p>
                             <span className="rounded-full border border-white/30 px-2.5 py-1 text-xs">{participants.length} players</span>
                         </div>
+                        {tournamentTier(tournament) === 'major' && <p className="text-xs font-bold uppercase tracking-widest" style={{color:'var(--gold)'}}>★ Major · {majorThemeById(tournament.majorThemeId)?.name}</p>}
                         <h1 className="mt-2 text-2xl font-bold leading-tight">{tournament.name}</h1>
                         <p className="mt-1 text-sm text-white/75">{tournament.startDate} — {tournament.endDate}</p>
                         <div className="mt-4 flex items-center gap-2 border-t border-white/20 pt-3 text-sm">
@@ -299,6 +302,7 @@ export default function TournamentOverview({tournamentId, onBack, onDraftManagem
             ) : (
                 <>
                     <header className="space-y-1">
+                        {tournamentTier(tournament) === 'major' && <p className="text-xs font-bold uppercase tracking-widest" style={{color:'var(--gold)'}}>★ Major · {majorThemeById(tournament.majorThemeId)?.name}</p>}
                         <h1 className="text-2xl font-bold">{tournament.name}</h1>
                         <p className="baggy-muted text-sm">{tournament.startDate} — {tournament.endDate} · {tournament.status.replaceAll('_', ' ')}</p>
                     </header>

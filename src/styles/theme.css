@@ -44,3 +44,122 @@
 .baggy-theme select, .baggy-theme textarea { color: var(--ink); background-color: var(--surface); border-color: var(--line); }
 /* Inputs inside the dark handicap-index hero need their own legible surface. */
 .baggy-hero input:not([type="checkbox"]):not([type="radio"]) { background: #FFFFFF; color: #24382E; }
+
+/* Major palettes use the same semantic tokens as the default BaggyGolf theme. */
+.baggy-theme[data-major-theme="emerald"][data-appearance="light"] {
+  --bg: #F5F5EF;
+  --surface: #FFFFFF;
+  --surface-soft: #E8EFE8;
+  --ink: #20382C;
+  --muted: #607365;
+  --line: #D9E4D9;
+  --gold: #997736;
+  --primary: #194734;
+  --primary-hover: #286347;
+  --on-primary: #FFFFFF;
+  --control: #E8EFE8;
+  --on-control: #194734;
+}
+.baggy-theme[data-major-theme="emerald"][data-appearance="dark"] {
+  --bg: #121D18;
+  --surface: #1F3026;
+  --surface-soft: #2B4133;
+  --ink: #F1F5ED;
+  --muted: #AEC4B3;
+  --line: #3E5747;
+  --gold: #DCC38B;
+  --primary: #326D4F;
+  --primary-hover: #3C8060;
+  --on-primary: #FFFFFF;
+  --control: #2B4133;
+  --on-control: #F1F5ED;
+}
+.baggy-theme[data-major-theme="navy"][data-appearance="light"] {
+  --bg: #F3F5F9;
+  --surface: #FFFFFF;
+  --surface-soft: #E9EDF5;
+  --ink: #202F49;
+  --muted: #65738C;
+  --line: #D9E0ED;
+  --gold: #A07C4A;
+  --primary: #263E65;
+  --primary-hover: #355786;
+  --on-primary: #FFFFFF;
+  --control: #E9EDF5;
+  --on-control: #263E65;
+}
+.baggy-theme[data-major-theme="navy"][data-appearance="dark"] {
+  --bg: #121A29;
+  --surface: #202D43;
+  --surface-soft: #2C3E5A;
+  --ink: #F2F5FB;
+  --muted: #B0BED3;
+  --line: #425572;
+  --gold: #E3CBA0;
+  --primary: #355A87;
+  --primary-hover: #456FA3;
+  --on-primary: #FFFFFF;
+  --control: #2C3E5A;
+  --on-control: #F2F5FB;
+}
+.baggy-theme[data-major-theme="burgundy"][data-appearance="light"] {
+  --bg: #FAF5F2;
+  --surface: #FFFFFF;
+  --surface-soft: #F5EAE7;
+  --ink: #4A2A33;
+  --muted: #826871;
+  --line: #ECDAD9;
+  --gold: #A26948;
+  --primary: #713844;
+  --primary-hover: #8A4955;
+  --on-primary: #FFFFFF;
+  --control: #F5EAE7;
+  --on-control: #713844;
+}
+.baggy-theme[data-major-theme="burgundy"][data-appearance="dark"] {
+  --bg: #21161B;
+  --surface: #35232B;
+  --surface-soft: #49313C;
+  --ink: #FBF0EB;
+  --muted: #D0B5BB;
+  --line: #654751;
+  --gold: #E8B994;
+  --primary: #854A59;
+  --primary-hover: #9D586A;
+  --on-primary: #FFFFFF;
+  --control: #49313C;
+  --on-control: #FBF0EB;
+}
+.baggy-theme[data-major-theme="slate"][data-appearance="light"] {
+  --bg: #F2F5F4;
+  --surface: #FFFFFF;
+  --surface-soft: #E7EFED;
+  --ink: #293D3C;
+  --muted: #647874;
+  --line: #D8E3DF;
+  --gold: #687F7C;
+  --primary: #304D4B;
+  --primary-hover: #426562;
+  --on-primary: #FFFFFF;
+  --control: #E7EFED;
+  --on-control: #304D4B;
+}
+.baggy-theme[data-major-theme="slate"][data-appearance="dark"] {
+  --bg: #151E20;
+  --surface: #263437;
+  --surface-soft: #34484A;
+  --ink: #EFF4F2;
+  --muted: #AEC3BF;
+  --line: #496062;
+  --gold: #C8D5D0;
+  --primary: #446C69;
+  --primary-hover: #53827D;
+  --on-primary: #FFFFFF;
+  --control: #34484A;
+  --on-control: #EFF4F2;
+}
+/* Active Majors own the whole app palette, including nested tournament views. */
+.baggy-theme[data-major-theme] .tournament-scope {
+  --primary: inherit;
+  --gold: inherit;
+}

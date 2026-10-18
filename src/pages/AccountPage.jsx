@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth.js';
 import ChangePassword from '../components/auth/ChangePassword.jsx';
 import CareerShowcase from '../components/profile/CareerShowcase.jsx';
+import EditHandicap from '../components/players/EditHandicap.jsx';
 
 export default function AccountPage({ onBack, onOpenTournament }) {
   const { player, user } = useAuth();
@@ -29,6 +30,12 @@ export default function AccountPage({ onBack, onOpenTournament }) {
             <dt className="text-baggygolf-muted">Username</dt><dd className="font-medium">@{player.username}</dd>
           </div>
         </dl>
+      </section>
+
+      <section aria-label="Handicap Index" className="rounded-xl border border-baggygolf-line bg-baggygolf-surface p-5">
+        <h2 className="mb-3 text-lg font-semibold text-baggygolf-950">Your handicap</h2>
+        <EditHandicap />
+        <p className="baggy-muted mt-3 text-xs">Changes won't affect handicaps already locked into a tournament.</p>
       </section>
 
       <CareerShowcase playerId={user?.uid} onOpenTournament={onOpenTournament} expanded />

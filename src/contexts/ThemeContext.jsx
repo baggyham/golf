@@ -1,3 +1,4 @@
+import { majorThemeById, tournamentTier } from '../lib/majorThemes.js';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 const ThemeContext = createContext(null);
@@ -21,6 +22,7 @@ function initialPreference() {
 
 export function ThemeProvider({ children }) {
   const [preference, setPreference] = useState(initialPreference);
+  const [activeMajorId, setActiveMajorId] = useState(null);
   const [systemDark, setSystemDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
   useEffect(() => {
     const query = window.matchMedia('(prefers-color-scheme: dark)');
@@ -34,8 +36,8 @@ export function ThemeProvider({ children }) {
     setPreference(value);
     try { localStorage.setItem(STORAGE_KEY, value); } catch { /* private browsing */ }
   }
-  const value = useMemo(() => ({ preference, mode, setPreference: changePreference }), [preference, mode]);
-  return <ThemeContext.Provider value={value}><div data-appearance={mode} className="baggy-theme min-h-screen">{children}</div></ThemeContext.Provider>;
+  const value = useMemo(() => ({ preference, mode, setPreference: changePreference, setActiveMajorId }), [preference, mode]);
+  return <ThemeContext.Provider value={value}><div data-appearance={mode} data-major-theme={activeMajorId || undefined} className="baggy-theme min-h-screen">{children}</div></ThemeContext.Provider>;
 }
 
 export function useTheme() {
@@ -46,7 +48,8 @@ export function useTheme() {
 
 // Only allow hex colours through to inline CSS custom properties.
 export function tournamentTheme(tournament) {
-  const raw = tournament?.theme;
+  const preset = tournamentTier(tournament) === 'major' ? majorThemeById(tournament?.majorThemeId) : null;
+  const raw = preset ?? (tournamentTier(tournament) === 'casual' ? null : tournament?.theme);
   const valid = (value, fallback) => typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
   return { '--tournament-primary': valid(raw?.primary, DEFAULT_THEME.primary), '--tournament-accent': valid(raw?.accent, DEFAULT_THEME.accent) };
 }

@@ -1,3 +1,4 @@
+import { majorThemeById } from '../lib/majorThemes.js';
 import { calculateFinalTournamentResults } from '../lib/tournamentFinalization.js';
 
 import {
@@ -25,6 +26,8 @@ export async function createTournament({
                                            endDate,
                                            handicapMode,
                                            players,
+                                           tier = 'casual',
+                                           majorThemeId = null,
                                        }) {
     const user = auth.currentUser;
 
@@ -63,6 +66,11 @@ export async function createTournament({
     // Validate handicap mode.
     if (!['fixed', 'course'].includes(handicapMode)) {
         throw new Error('Invalid handicap mode.');
+    }
+
+    if (!['casual', 'major'].includes(tier)) throw new Error('Invalid competition tier.');
+    if (tier === 'major' && !majorThemeById(majorThemeId)) {
+        throw new Error('Select a valid Major theme.');
     }
 
     // Validate selected players.
@@ -120,6 +128,8 @@ export async function createTournament({
         createdBy: user.uid,
         status: 'draft',
         format: 'stableford',
+        tier,
+        ...(tier === 'major' ? { majorThemeId } : {}),
         handicapMode,
         participants,
         participantIds: Object.keys(participants),

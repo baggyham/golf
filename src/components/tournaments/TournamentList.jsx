@@ -1,3 +1,4 @@
+import { tournamentTier, majorThemeById } from '../../lib/majorThemes.js';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth.js';
 import { getMyTournaments } from '../../repositories/tournamentRepository.js';
@@ -38,6 +39,7 @@ function TournamentCard({ tournament, onOpen, userId }) {
     <article className={`baggy-surface rounded-2xl p-4 sm:p-5 ${completed && champion ? "border-2" : ""}`} style={completed && champion ? {borderColor: "var(--gold)"} : undefined}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
+          {tournamentTier(tournament) === 'major' && <p className="mb-1 text-xs font-bold uppercase tracking-wider" style={{color:'var(--gold)'}}>★ Major · {majorThemeById(tournament.majorThemeId)?.name || 'Championship'}</p>}
           <h3 className="break-words text-base font-bold sm:text-lg">
             {tournament.name || 'Untitled tournament'}
           </h3>

@@ -1,4 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useTheme } from './contexts/ThemeContext.jsx';
+import { tournamentTier, majorThemeById } from './lib/majorThemes.js';
 import AppShell from './components/layout/AppShell.jsx';
 import HomePage from './pages/HomePage.jsx';
 import AccountPage from './pages/AccountPage.jsx';
@@ -8,11 +10,17 @@ import TournamentOverview from './components/tournaments/TournamentOverview.jsx'
 import ActiveScorecardPage from './pages/ActiveScorecardPage.jsx';
 
 export default function App() {
+  const { setActiveMajorId } = useTheme();
   const [activePage, setActivePage] = useState('home');
   const [selectedTournamentId, setSelectedTournamentId] = useState(null);
   const [activeTournament, setActiveTournament] = useState(null);
   const [draftManagementOpen, setDraftManagementOpen] = useState(false);
   const onActiveTournamentChange = useCallback((t) => setActiveTournament(t), []);
+  useEffect(() => {
+    const major = activeTournament && tournamentTier(activeTournament) === 'major' ? majorThemeById(activeTournament.majorThemeId) : null;
+    setActiveMajorId(major?.id ?? null);
+    return () => setActiveMajorId(null);
+  }, [activeTournament, setActiveMajorId]);
 
   function navigate(page) {
     if (page === 'activeScorecard' && activeTournament) {

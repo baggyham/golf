@@ -115,7 +115,7 @@ service cloud.firestore {
         ])
         && request.resource.data.keys().hasOnly([
           'name', 'startDate', 'endDate', 'createdBy', 'status',
-          'format', 'handicapMode', 'participants', 'participantIds',
+          'format', 'handicapMode', 'participants', 'participantIds', 'tier', 'majorThemeId',
           'createdAt', 'updatedAt'
         ])
         && request.resource.data.createdBy == request.auth.uid
@@ -126,6 +126,11 @@ service cloud.firestore {
         && validDate(request.resource.data.endDate)
         && request.resource.data.endDate >= request.resource.data.startDate
         && request.resource.data.status == 'draft'
+        && request.resource.data.get('tier', 'casual') in ['casual', 'major']
+        && (request.resource.data.get('tier', 'casual') == 'major'
+          ? (request.resource.data.keys().hasAll(['majorThemeId'])
+            && request.resource.data.majorThemeId in ['emerald', 'navy', 'burgundy', 'slate'])
+          : !request.resource.data.keys().hasAny(['majorThemeId']))
         && request.resource.data.format == 'stableford'
         && request.resource.data.handicapMode in ['fixed', 'course']
         && request.resource.data.participants is map
