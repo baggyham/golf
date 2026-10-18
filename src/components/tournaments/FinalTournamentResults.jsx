@@ -1,5 +1,5 @@
 /** Read-only presentation of the final, saved tournament result. No recalculation. */
-export default function FinalTournamentResults({ tournament, rounds = [] }) {
+export default function FinalTournamentResults({ tournament, rounds = [], onOpenPlayer }) {
   const standings = Array.isArray(tournament?.finalStandings) ? tournament.finalStandings : [];
   if (!standings.length) {
     return <section className="baggy-surface rounded-2xl p-5"><h2 className="font-bold">Final results</h2><p className="baggy-muted mt-2 text-sm">Final standings are not available yet.</p></section>;
@@ -23,7 +23,7 @@ export default function FinalTournamentResults({ tournament, rounds = [] }) {
           {standings.map((row) => (
             <li key={row.playerId} className="flex min-h-16 items-center gap-3 border-b px-2 py-3 last:border-b-0" style={{borderColor:'var(--line)'}}>
               <span className="w-8 shrink-0 text-center text-xl" aria-label={`Position ${row.position}`}>{row.position === 1 ? '🥇' : row.position === 2 ? '🥈' : row.position === 3 ? '🥉' : String(row.position)}</span>
-              <div className="min-w-0 flex-1"><p className="truncate font-semibold" style={theme}>{row.displayName}</p><p className="baggy-muted text-xs">{row.position === 1 ? (winners.length > 1 ? 'Joint champion' : 'Champion') : `${row.position}${row.position === 2 ? 'nd' : row.position === 3 ? 'rd' : 'th'} place`}</p></div>
+              <div className="min-w-0 flex-1"><button type="button" disabled={!onOpenPlayer} onClick={() => onOpenPlayer?.(row.playerId)} className="truncate text-left font-semibold hover:underline disabled:no-underline" style={theme}>{row.displayName}</button><p className="baggy-muted text-xs">{row.position === 1 ? (winners.length > 1 ? 'Joint champion' : 'Champion') : `${row.position}${row.position === 2 ? 'nd' : row.position === 3 ? 'rd' : 'th'} place`}</p></div>
               <strong className="shrink-0 text-lg tabular-nums" style={theme}>{row.totalPoints} <span className="baggy-muted text-xs font-normal">pts</span></strong>
             </li>
           ))}

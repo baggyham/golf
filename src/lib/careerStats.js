@@ -6,6 +6,9 @@ export function calculateCareerStats(playerId, completedTournaments, roundRecord
   const tournaments = completedTournaments.filter((t) => t.status === 'completed' && t.participants?.[playerId]);
   const wins = tournaments.filter((t) => (t.winnerIds ?? []).includes(playerId)).length;
   const podiums = tournaments.filter((t) => (t.finalStandings ?? []).some((row) => row.playerId === playerId && row.position <= 3)).length;
+  const majors = tournaments.filter(t => t.tier === 'major');
+  const majorWins = majors.filter(t => (t.winnerIds ?? []).includes(playerId)).length;
+  const majorPodiums = majors.filter(t => (t.finalStandings ?? []).some(row => row.playerId === playerId && row.position <= 3)).length;
   const honours = tournaments.flatMap((t) => {
     const row = (t.finalStandings ?? []).find((r) => r.playerId === playerId);
     if (!row || ![1, 2, 3].includes(row.position)) return [];
@@ -31,5 +34,5 @@ export function calculateCareerStats(playerId, completedTournaments, roundRecord
   }
   const fortyPlusRounds = rounds.filter(r => r.points >= 40).length;
   const averagePoints = rounds.length ? rounds.reduce((sum, r) => sum + r.points, 0) / rounds.length : null;
-  return { playerId, honours, fortyPlusRounds, averagePoints, wins, podiums, roundsPlayed: rounds.length, tournamentsPlayed: tournaments.length, bestRound, eagleCount, birdieCount, awards, rounds, tournaments };
+  return { playerId, honours, fortyPlusRounds, averagePoints, wins, podiums, majorWins, majorPodiums, roundsPlayed: rounds.length, tournamentsPlayed: tournaments.length, bestRound, eagleCount, birdieCount, awards, rounds, tournaments };
 }

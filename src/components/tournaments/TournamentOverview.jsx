@@ -11,7 +11,7 @@ import RoundList from './rounds/RoundList.jsx';
 import FinalTournamentResults from './FinalTournamentResults.jsx';
 import HistoricalRoundScorecard from './HistoricalRoundScorecard.jsx';
 
-export default function TournamentOverview({tournamentId, onBack, onDraftManagementChange}) {
+export default function TournamentOverview({tournamentId, onBack, onDraftManagementChange, onOpenPlayer}) {
     const {user} = useAuth();
     const [tournament, setTournament] = useState(null);
     const [managementSection, setManagementSection] = useState(null);
@@ -322,7 +322,7 @@ export default function TournamentOverview({tournamentId, onBack, onDraftManagem
                         <HistoricalRoundScorecard key={historicalRoundId} tournament={tournament} round={rounds.find(r => r.id === historicalRoundId)} onBack={() => setHistoricalRoundId(null)} />
                     ) : (
                         <>
-                          <FinalTournamentResults tournament={tournament} rounds={rounds} />
+                          <FinalTournamentResults tournament={tournament} rounds={rounds} onOpenPlayer={onOpenPlayer} />
                           <section className="baggy-surface rounded-2xl p-4 sm:p-5" aria-label="Historical scorecards">
                             <h2 className="text-lg font-bold">Official scorecards</h2>
                             <div className="mt-3 space-y-2">{rounds.filter(r => r.status === 'completed').map(round => (

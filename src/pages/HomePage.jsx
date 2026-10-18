@@ -70,7 +70,7 @@ function RecentForm({ tournaments, playerId }) {
   </section>;
 }
 
-export default function HomePage({ onNavigate, onOpenTournament, onActiveTournamentChange, onManageTournament }) {
+export default function HomePage({ onNavigate, onOpenTournament, onActiveTournamentChange, onManageTournament, onOpenPlayer }) {
   const { player, user } = useAuth();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -99,7 +99,7 @@ export default function HomePage({ onNavigate, onOpenTournament, onActiveTournam
   // While a tournament is running, Home is the Leaderboard tab: no career dashboard.
   if (active) return <div className="live-home mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col gap-2">
     {active.createdBy === user?.uid && <div className="flex shrink-0 justify-end"><button type="button" onClick={() => onManageTournament(active.id)} className="live-manage-button rounded-xl border px-3 py-1.5 text-xs font-bold" style={{borderColor:'var(--line)'}}>Manage tournament</button></div>}
-    <LiveLeaderboardStage tournament={active}/>
+    <LiveLeaderboardStage tournament={active} onOpenPlayer={onOpenPlayer}/>
     {error && <p role="alert" className="shrink-0 text-xs text-red-600">{error}</p>}
   </div>;
   return <div className="mx-auto flex h-full min-h-0 max-w-3xl flex-col gap-2 sm:gap-3">
