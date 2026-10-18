@@ -3,7 +3,9 @@ import { useAuth } from '../../hooks/useAuth.js';
 import RoundSummary from './RoundSummary.jsx';
 import { getRoundPlayingHandicap, getHoleHandicapStrokes } from '../../lib/handicap.js';
 import { calculateRoundStableford } from '../../lib/stableford.js';
-import { emptyScorecard, getMyScoreEntry, saveMyScoreEntry } from '../../repositories/scoreEntryRepository.js';
+import { emptyScorecard, getMyScoreEntry, saveMyScoreEntry, ScoreConflictError } from '../../repositories/scoreEntryRepository.js';
+import { clearScoreDraft, readScoreDraft, scoreDraftKey, writeScoreDraft } from '../../lib/scoreDrafts.js';
+import { mergeScorecards } from '../../lib/scoreMerge.js';
 
 export default function ScoreEntry({ tournament, round }) {
   const { user } = useAuth();
@@ -16,8 +18,15 @@ export default function ScoreEntry({ tournament, round }) {
   const cardsRef = useRef({});
   const revisionRef = useRef({});
   const savedRevisionRef = useRef({});
+  const baselineRef = useRef({});
+  const [conflicts, setConflicts] = useState({});
+  const [mergeReviews, setMergeReviews] = useState({});
+  const conflictsRef = useRef({});
   const timersRef = useRef({});
   const writingRef = useRef({});
+  const pendingStorageRef = useRef({});
+  const [recoveredCount, setRecoveredCount] = useState(0);
+  const draftKeyFor = (id) => scoreDraftKey(tournament.id, round.id, id, user?.uid ?? '');
   const aliveRef = useRef(true);
   const savingContextRef = useRef({ tournament, round });
   const [loading, setLoading] = useState(true);
@@ -31,7 +40,11 @@ export default function ScoreEntry({ tournament, round }) {
   // from marking newer edits as saved, and prevent overlapping writes.
   async function flushCard(id) {
     clearTimeout(timersRef.current[id]);
-    if (writingRef.current[id]) return;
+    if (writingRef.current[id] || conflictsRef.current[id]) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      if (aliveRef.current) setSaveStatus((s) => ({ ...s, [id]: 'offline' }));
+      return;
+    }
     if ((revisionRef.current[id] ?? 0) === (savedRevisionRef.current[id] ?? 0)) return;
     const { tournament: activeTournament, round: activeRound } = savingContextRef.current;
     if (activeTournament.status !== 'in_progress' || activeRound.status !== 'in_progress') return;
@@ -41,14 +54,34 @@ export default function ScoreEntry({ tournament, round }) {
       while ((revisionRef.current[id] ?? 0) !== (savedRevisionRef.current[id] ?? 0)) {
         const snapshotRevision = revisionRef.current[id];
         const snapshot = [...cardsRef.current[id]];
-        await saveMyScoreEntry(activeTournament, activeRound, id, snapshot);
+        await saveMyScoreEntry(activeTournament, activeRound, id, snapshot, baselineRef.current[id]);
+        baselineRef.current[id] = [...snapshot];
+        // If an edit arrived while the write was in flight, update the
+        // pending draft's baseline to the version just committed.
+        if (revisionRef.current[id] !== snapshotRevision) {
+          try { writeScoreDraft(window.localStorage, draftKeyFor(id), cardsRef.current[id], baselineRef.current[id]); }
+          catch { pendingStorageRef.current[id] = true; }
+        }
         savedRevisionRef.current[id] = snapshotRevision;
+        // Only remove a recovered draft once the same revision has reached Firestore.
+        if (revisionRef.current[id] === snapshotRevision) {
+          try { clearScoreDraft(window.localStorage, draftKeyFor(id)); }
+          catch { /* Storage access may be restricted; retain normal write success. */ }
+        }
       }
       if (aliveRef.current) setSaveStatus((s) => ({ ...s, [id]: 'saved' }));
     } catch (err) {
+      if (err instanceof ScoreConflictError) {
+        if (aliveRef.current) {
+          conflictsRef.current = { ...conflictsRef.current, [id]: err.message };
+          setConflicts(conflictsRef.current);
+        }
+        if (aliveRef.current) setSaveStatus((current) => ({ ...current, [id]: 'conflict' }));
+        return;
+      }
       if (aliveRef.current) {
         setSaveStatus((s) => ({ ...s, [id]: 'error' }));
-        setError(`Unable to save ${activeTournament.participants?.[id]?.displayName ?? 'player'}: ${err.message}`);
+        setError(`Unable to sync ${activeTournament.participants?.[id]?.displayName ?? 'player'}: ${err.message}. Your changes are kept on this device if local storage is available.`);
       }
     } finally {
       writingRef.current[id] = false;
@@ -56,9 +89,23 @@ export default function ScoreEntry({ tournament, round }) {
   }
 
   useEffect(() => {
+    function retryPending() {
+      if (!navigator.onLine) return;
+      for (const id of Object.keys(cardsRef.current)) void flushCard(id);
+    }
+    window.addEventListener('online', retryPending);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') retryPending();
+      if (document.visibilityState === 'hidden') {
+        for (const id of Object.keys(cardsRef.current)) void flushCard(id);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
     aliveRef.current = true;
     return () => {
       aliveRef.current = false;
+      window.removeEventListener('online', retryPending);
+      document.removeEventListener('visibilitychange', onVisible);
       // Start any pending saves when navigating away; the writes are best-effort.
       for (const id of Object.keys(timersRef.current)) {
         clearTimeout(timersRef.current[id]);
@@ -76,6 +123,12 @@ export default function ScoreEntry({ tournament, round }) {
     setCards({});
     setSaveStatus({});
     cardsRef.current = {};
+    pendingStorageRef.current = {};
+    baselineRef.current = {};
+    conflictsRef.current = {};
+    setConflicts({});
+    setMergeReviews({});
+    setRecoveredCount(0);
     revisionRef.current = {};
     savedRevisionRef.current = {};
     Object.values(timersRef.current).forEach(clearTimeout);
@@ -83,13 +136,32 @@ export default function ScoreEntry({ tournament, round }) {
     setHoleIndex(0);
     setShowSummary(false);
     Promise.all(participants.map(async ([id]) => {
-      const entry = await getMyScoreEntry(tournament.id, round.id, id);
-      return [id, entry?.holes ?? emptyScorecard()];
+      const stored = readScoreDraft(window.localStorage, draftKeyFor(id));
+      // Recover immediately without waiting for a network read when offline.
+      if (stored && !navigator.onLine) return [id, stored.holes, true, stored.version === 2 ? stored.baseHoles : undefined];
+      try {
+        const entry = await getMyScoreEntry(tournament.id, round.id, id);
+        return [id, stored?.holes ?? entry?.holes ?? emptyScorecard(), Boolean(stored), stored ? (stored.version === 2 ? stored.baseHoles : undefined) : (entry?.holes ?? null)];
+      } catch (readError) {
+        if (stored) return [id, stored.holes, true, stored.version === 2 ? stored.baseHoles : undefined];
+        throw readError;
+      }
     })).then((entries) => {
       if (mounted) {
-        const loaded = Object.fromEntries(entries);
+        const loaded = Object.fromEntries(entries.map(([id, holes]) => [id, holes]));
+        const recovered = entries.filter(([, , hasDraft]) => hasDraft);
         cardsRef.current = loaded;
+        for (const [id, , , base] of entries) baselineRef.current[id] = base;
+        for (const [id] of recovered) {
+          revisionRef.current[id] = 1;
+          savedRevisionRef.current[id] = 0;
+        }
+        setRecoveredCount(recovered.length);
         setCards(loaded);
+        if (recovered.length) {
+          setSaveStatus(Object.fromEntries(recovered.map(([id]) => [id, 'pending'])));
+          for (const [id] of recovered) timersRef.current[id] = setTimeout(() => void flushCard(id), 100);
+        }
       }
     }).catch((err) => {
       if (mounted) setError(err.message || 'Unable to load scorecards.');
@@ -107,17 +179,87 @@ export default function ScoreEntry({ tournament, round }) {
   }, [holeIndex]);
 
   function updateScore(playerId, value) {
-    if (!canEdit || loading) return;
+    if (!canEdit || loading || conflicts[playerId]) return;
     const updatedCard = [...(cardsRef.current[playerId] ?? emptyScorecard())];
     updatedCard[holeIndex] = value;
     cardsRef.current = { ...cardsRef.current, [playerId]: updatedCard };
     setCards(cardsRef.current);
     const nextRevision = (revisionRef.current[playerId] ?? 0) + 1;
     revisionRef.current[playerId] = nextRevision;
+    try {
+      writeScoreDraft(window.localStorage, draftKeyFor(playerId), updatedCard, baselineRef.current[playerId]);
+      pendingStorageRef.current[playerId] = false;
+    } catch {
+      pendingStorageRef.current[playerId] = true;
+      setError('Device storage is unavailable. Do not close this screen until your score has synced.');
+    }
     setSaveStatus((s) => ({ ...s, [playerId]: 'pending' }));
-    setError('');
+    if (!pendingStorageRef.current[playerId]) setError('');
     clearTimeout(timersRef.current[playerId]);
     timersRef.current[playerId] = setTimeout(() => { void flushCard(playerId); }, 750);
+  }
+
+  async function reviewConflict(id) {
+    try {
+      const entry = await getMyScoreEntry(tournament.id, round.id, id);
+      const remote = entry?.holes ?? emptyScorecard();
+      const local = [...(cardsRef.current[id] ?? emptyScorecard())];
+      const { merged, conflicts: overlapping } = mergeScorecards(baselineRef.current[id], local, remote);
+      setMergeReviews((current) => ({ ...current, [id]: {
+        remoteBaseline: entry?.holes ?? null,
+        merged,
+        overlapping,
+        choices: {},
+      } }));
+    } catch (err) { setError(`Unable to review saved score: ${err.message}`); }
+  }
+
+  function chooseMergeHole(id, hole, choice) {
+    setMergeReviews((current) => ({ ...current, [id]: {
+      ...current[id], choices: { ...current[id].choices, [hole]: choice },
+    } }));
+  }
+
+  function applyMerge(id) {
+    const review = mergeReviews[id];
+    if (!review || review.overlapping.some(({ holeIndex: index }) => !review.choices[index])) return;
+    const next = [...review.merged];
+    for (const { holeIndex: index, local, remote } of review.overlapping) {
+      next[index] = review.choices[index] === 'local' ? local : remote;
+    }
+    // Keep the draft until the guarded transaction confirms this baseline.
+    try { writeScoreDraft(window.localStorage, draftKeyFor(id), next, review.remoteBaseline); }
+    catch { setError('Unable to store merged draft on this device. Keep this page open until synced.'); }
+    baselineRef.current[id] = review.remoteBaseline;
+    cardsRef.current = { ...cardsRef.current, [id]: next };
+    setCards(cardsRef.current);
+    revisionRef.current[id] = (revisionRef.current[id] ?? 0) + 1;
+    const updated = { ...conflictsRef.current };
+    delete updated[id];
+    conflictsRef.current = updated;
+    setConflicts(updated);
+    setMergeReviews((current) => { const value = { ...current }; delete value[id]; return value; });
+    setSaveStatus((current) => ({ ...current, [id]: 'pending' }));
+    void flushCard(id); // Transaction will recheck the server and round status.
+  }
+
+  async function discardLocal(id) {
+    try {
+      const entry = await getMyScoreEntry(tournament.id, round.id, id);
+      const latest = entry?.holes ?? emptyScorecard();
+      baselineRef.current[id] = entry?.holes ?? null;
+      cardsRef.current = { ...cardsRef.current, [id]: latest };
+      setCards(cardsRef.current);
+      revisionRef.current[id] = 0;
+      savedRevisionRef.current[id] = 0;
+      clearScoreDraft(window.localStorage, draftKeyFor(id));
+      const nextConflicts = { ...conflictsRef.current };
+      delete nextConflicts[id];
+      conflictsRef.current = nextConflicts;
+      setConflicts(nextConflicts);
+      setMergeReviews((current) => { const value = { ...current }; delete value[id]; return value; });
+      setSaveStatus((current) => ({ ...current, [id]: 'saved' }));
+    } catch (err) { setError(`Unable to reload remote score: ${err.message}`); }
   }
 
   if (!user || !tournament.participants?.[user.uid]) return <p>Only tournament participants can enter scores.</p>;
@@ -129,7 +271,7 @@ export default function ScoreEntry({ tournament, round }) {
 
   const recordedCount = participants.filter(([id]) => cardFor(id)[holeIndex] != null).length;
   const statuses = participants.map(([id]) => saveStatus[id]);
-  const savingMessage = statuses.includes('error') ? 'Save failed' : statuses.includes('saving') ? 'Saving…' : statuses.includes('pending') ? 'Unsaved changes' : 'Saved';
+  const savingMessage = statuses.includes('error') ? 'Sync failed' : statuses.includes('offline') ? 'Scores saved on this device, pending sync' : statuses.includes('saving') ? 'Syncing scores' : statuses.includes('pending') ? 'Scores pending sync' : 'Scores synced';
 
   return (
     <section
@@ -201,7 +343,7 @@ export default function ScoreEntry({ tournament, round }) {
                       {shotsReceived != null && shotsReceived < 0 && <span className="text-[10px]" style={{ color: 'var(--muted, #68796C)' }}>+{Math.abs(shotsReceived)}</span>}
                       {shotsReceived != null && shotsReceived > 5 && <span className="text-[10px]">+{shotsReceived - 5}</span>}
                     </div>
-                    <button type="button" disabled={!canEdit} aria-pressed={pickedUp} aria-label={`${pickedUp ? 'Undo pickup' : 'Pick up'} for ${name}`}
+                    <button type="button" disabled={!canEdit || Boolean(conflicts[id])} aria-pressed={pickedUp} aria-label={`${pickedUp ? 'Undo pickup' : 'Pick up'} for ${name}`}
                       onClick={() => updateScore(id, pickedUp ? null : 'pickup')}
                       className="mt-1.5 w-fit rounded-md border px-3 py-1.5 text-left text-[11px] font-medium leading-tight transition-colors disabled:opacity-40"
                       style={{ color: pickedUp ? 'var(--on-primary, white)' : 'var(--muted, #68796C)', background: pickedUp ? 'var(--primary, #173D30)' : 'var(--surface-soft, #EDF0E8)', borderColor: pickedUp ? 'var(--primary, #173D30)' : 'var(--line, #E1E6DA)' }}>
@@ -209,11 +351,11 @@ export default function ScoreEntry({ tournament, round }) {
                     </button>
                   </div>
                   <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-                    <button type="button" aria-label={`Remove one stroke for ${name}`} disabled={!canEdit || strokes === 1}
+                    <button type="button" aria-label={`Remove one stroke for ${name}`} disabled={!canEdit || Boolean(conflicts[id]) || strokes === 1}
                       className="flex h-10 w-10 items-center justify-center rounded-full text-xl font-semibold disabled:opacity-35" style={{ background: 'var(--surface-soft, #EDF0E8)' }}
                       onClick={() => updateScore(id, typeof strokes === 'number' ? Math.max(1, strokes - 1) : Math.max(1, hole.par - 1))}>−</button>
                     <span aria-live="polite" className="mx-1.5 flex h-11 min-w-10 items-center justify-center text-center text-xl font-extrabold tabular-nums sm:mx-2 sm:min-w-11 sm:text-2xl" style={{ color: 'var(--ink, #173D30)' }}>{pickedUp ? 'P/U' : strokes ?? '—'}</span>
-                    <button type="button" aria-label={`Add one stroke for ${name}`} disabled={!canEdit || strokes === 30}
+                    <button type="button" aria-label={`Add one stroke for ${name}`} disabled={!canEdit || Boolean(conflicts[id]) || strokes === 30}
                       className="flex h-10 w-10 items-center justify-center rounded-full text-xl font-semibold disabled:opacity-35" style={{ background: 'var(--surface-soft, #EDF0E8)' }}
                       onClick={() => updateScore(id, typeof strokes === 'number' ? Math.min(30, strokes + 1) : hole.par)}>+</button>
                     <div className="flex h-12 w-10 shrink-0 flex-col items-center justify-center text-center sm:w-11" style={{ color: 'var(--ink, #173D30)' }} aria-label={points == null ? 'Points not yet available' : `${points} Stableford points`}>
@@ -230,10 +372,43 @@ export default function ScoreEntry({ tournament, round }) {
 
         {/* Keep ordinary save progress out of the layout, but announce it to assistive tech. */}
         <span className="sr-only" role="status" aria-live="polite">{canEdit ? savingMessage : 'Score entry locked'}</span>
-        {statuses.includes('error') && (
+        {Object.entries(conflicts).map(([id, message]) => (
+          <div key={id} className="rounded-lg border border-amber-400 p-2 text-xs" role="alert">
+            <p>{tournament.participants?.[id]?.displayName ?? 'Player'}: {message} Your local scores remain on this device.</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button type="button" className="rounded-md border px-3 py-2 font-semibold" onClick={() => void reviewConflict(id)}>Review and merge scores</button>
+              <button type="button" className="rounded-md border px-3 py-2" onClick={() => void discardLocal(id)}>Discard local draft</button>
+            </div>
+            {mergeReviews[id] && (
+              <div className="mt-3 space-y-2 rounded-lg border p-3" style={{ borderColor: 'var(--line)' }}>
+                <p className="font-semibold">Review scorecard differences</p>
+                <p>Non-overlapping changes will be combined automatically. For each overlapping hole, choose the score to keep.</p>
+                {mergeReviews[id].overlapping.length === 0 ? <p>No overlapping holes. Ready to merge.</p> : mergeReviews[id].overlapping.map(({ holeIndex: index, local, remote }) => (
+                  <div key={index} className="flex flex-wrap items-center gap-2 border-t pt-2" style={{ borderColor: 'var(--line)' }}>
+                    <span className="min-w-14 font-semibold">Hole {index + 1}</span>
+                    <button type="button" aria-pressed={mergeReviews[id].choices[index] === 'local'}
+                      className="rounded-md border px-3 py-2" style={{ background: mergeReviews[id].choices[index] === 'local' ? 'var(--surface-soft)' : 'transparent', borderColor: 'var(--line)' }}
+                      onClick={() => chooseMergeHole(id, index, 'local')}>This device: {local === null ? '—' : local === 'pickup' ? 'P/U' : local}</button>
+                    <button type="button" aria-pressed={mergeReviews[id].choices[index] === 'remote'}
+                      className="rounded-md border px-3 py-2" style={{ background: mergeReviews[id].choices[index] === 'remote' ? 'var(--surface-soft)' : 'transparent', borderColor: 'var(--line)' }}
+                      onClick={() => chooseMergeHole(id, index, 'remote')}>Saved: {remote === null ? '—' : remote === 'pickup' ? 'P/U' : remote}</button>
+                  </div>
+                ))}
+                <button type="button" className="rounded-md px-3 py-2 font-semibold" style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
+                  disabled={mergeReviews[id].overlapping.some(({ holeIndex: index }) => !mergeReviews[id].choices[index]) || !canEdit}
+                  onClick={() => applyMerge(id)}>Merge and sync</button>
+                {!canEdit && <p>The round is closed. Scores cannot be uploaded.</p>}
+              </div>
+            )}
+          </div>
+        ))}
+        {recoveredCount > 0 && statuses.some((s) => ['pending', 'offline', 'error', 'saving'].includes(s)) && (
+          <p className="shrink-0 text-xs" style={{ color: 'var(--muted)' }} role="status">Recovered local scores. Waiting to sync.</p>
+        )}
+        {(statuses.includes('offline') || statuses.includes('error')) && (
           <div className="flex shrink-0 items-center justify-between gap-2 rounded-lg border border-red-300 bg-red-50 px-2 py-1.5 text-xs text-red-800" role="alert">
-            <span>Scores not saved</span>
-            <button type="button" className="rounded-md border border-red-400 px-2 py-1 font-semibold" onClick={() => { setError(''); participants.filter(([id]) => saveStatus[id] === 'error').forEach(([id]) => { void flushCard(id); }); }}>Retry</button>
+            <span>{statuses.includes('offline') ? 'Offline — scores kept on this device' : 'Sync failed — local scores retained'}</span>
+            <button type="button" className="rounded-md border border-red-400 px-2 py-1 font-semibold" onClick={() => { setError(''); participants.filter(([id]) => ['error', 'offline'].includes(saveStatus[id])).forEach(([id]) => { void flushCard(id); }); }}>Retry</button>
           </div>
         )}
         {error && <p role="alert" className="shrink-0 text-xs text-red-600">{error}</p>}
