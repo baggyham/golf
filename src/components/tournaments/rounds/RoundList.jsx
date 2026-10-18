@@ -50,7 +50,7 @@ export default function RoundList({
     const isOrganiser = user?.uid === tournament.createdBy;
 
     if (rounds.length === 0) {
-        return <p className="text-sm text-gray-500">No rounds added yet.</p>;
+        return <p className="text-sm text-baggygolf-muted">No rounds added yet.</p>;
     }
 
     return (
@@ -62,15 +62,15 @@ export default function RoundList({
                 return (
                     <article
                         key={round.id}
-                        className="space-y-4 rounded-lg border border-gray-200 p-4"
+                        className="space-y-4 rounded-lg border border-baggygolf-line p-4"
                     >
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
                                 <h3 className="font-semibold">{round.name}</h3>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-baggygolf-muted">
                                     {round.date} · {round.courseName || 'No course selected'}
                                 </p>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-baggygolf-muted">
                                     {round.scorecard ? 'Scorecard configured' : 'Scorecard needed'}
                                     {' · '}Status: {round.status.replaceAll('_', ' ')}
                                 </p>
@@ -84,7 +84,7 @@ export default function RoundList({
                                             scoringRoundId === round.id ? null : round.id,
                                         )
                                     }
-                                    className="text-sm font-semibold text-fairway-800"
+                                    className="text-sm font-semibold text-baggygolf-800"
                                 >
                                     {scoringRoundId === round.id
                                         ? 'Close score entry'
@@ -95,21 +95,21 @@ export default function RoundList({
                             {isOrganiser && tournament.status === 'in_progress' && round.status === 'draft' && (
                                 <button type="button" disabled={Boolean(busyRoundId)}
                                     onClick={() => handleStatusChange(round.id, 'start')}
-                                    className="rounded bg-fairway-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                                    className="rounded bg-baggygolf-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
                                     Start round
                                 </button>
                             )}
                             {isOrganiser && round.status === 'in_progress' && (
                                 <button type="button" disabled={Boolean(busyRoundId)}
                                     onClick={() => handleStatusChange(round.id, 'finish')}
-                                    className="rounded border border-gray-300 px-3 py-2 text-sm font-semibold disabled:opacity-50">
+                                    className="rounded border border-baggygolf-line px-3 py-2 text-sm font-semibold disabled:opacity-50">
                                     Finish round
                                 </button>
                             )}
                         {isOrganiser && round.status === 'awaiting_verification' && (
                                 <button type="button" disabled={Boolean(busyRoundId)}
                                     onClick={() => handleComplete(round.id)}
-                                    className="rounded bg-fairway-950 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                                    className="rounded bg-baggygolf-primary px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
                                     {busyRoundId === round.id ? 'Completing...' : 'Complete round'}
                                 </button>
                             )}
@@ -119,7 +119,7 @@ export default function RoundList({
                                     onClick={() =>
                                         setEditingRoundId(isEditing ? null : round.id)
                                     }
-                                    className="text-sm font-semibold text-fairway-800"
+                                    className="text-sm font-semibold text-baggygolf-800"
                                 >
                                     {isEditing ? 'Close editor' : 'Edit scorecard'}
                                 </button>

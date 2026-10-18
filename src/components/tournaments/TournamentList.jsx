@@ -115,7 +115,7 @@ export default function TournamentList({ onSelectTournament, onCreate }) {
     <div className="mx-auto max-w-4xl space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-fairway-950">Tournaments</h1>
+          <h1 className="text-2xl font-bold text-baggygolf-950">Tournaments</h1>
           <p className="mt-1 baggy-muted text-sm">Your competitions, all in one place.</p>
         </div>
 
@@ -134,7 +134,7 @@ export default function TournamentList({ onSelectTournament, onCreate }) {
       {!loading && !error && SECTIONS.map((section) => (
         <section key={section.id} aria-labelledby={`tournaments-${section.id}`} className="space-y-3">
           <div className="flex items-center gap-2">
-            <h2 id={`tournaments-${section.id}`} className="text-lg font-bold text-fairway-950">
+            <h2 id={`tournaments-${section.id}`} className="text-lg font-bold text-baggygolf-950">
               {section.title}
             </h2>
             <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">

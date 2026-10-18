@@ -59,9 +59,9 @@ export default function EditHandicap() {
         return (
             <div className="flex items-center justify-between gap-4">
                 <div>
-                    <p className="text-sm text-gray-500">Handicap Index</p>
+                    <p className="text-sm text-baggygolf-muted">Handicap Index</p>
 
-                    <p className="text-2xl font-bold text-fairway-950">
+                    <p className="text-2xl font-bold text-baggygolf-950">
                         {player.handicapIndex ?? 'Not set'}
                     </p>
                 </div>
@@ -74,7 +74,7 @@ export default function EditHandicap() {
                             setMessage('');
                             setEditing(true);
                         }}
-                        className="text-sm font-semibold text-fairway-800 hover:underline"
+                        className="text-sm font-semibold text-baggygolf-800 hover:underline"
                     >
                         Edit handicap
                     </button>
@@ -93,7 +93,7 @@ export default function EditHandicap() {
         <form onSubmit={save} className="space-y-3">
             <label
                 htmlFor="handicap-index"
-                className="block text-sm font-medium text-gray-700"
+                className="block text-sm font-medium text-baggygolf-text"
             >
                 Handicap Index
             </label>
@@ -107,7 +107,7 @@ export default function EditHandicap() {
                 required
                 value={handicap}
                 onChange={(event) => setHandicap(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-fairway-800 focus:outline-none"
+                className="w-full rounded-lg border border-baggygolf-line px-3 py-2 focus:border-baggygolf-800 focus:outline-none"
             />
 
             {error && (
@@ -120,7 +120,7 @@ export default function EditHandicap() {
                 <button
                     type="submit"
                     disabled={saving}
-                    className="rounded-lg bg-fairway-950 px-4 py-2 font-medium text-white disabled:opacity-50"
+                    className="rounded-lg bg-baggygolf-primary px-4 py-2 font-medium text-white disabled:opacity-50"
                 >
                     {saving ? 'Saving...' : 'Save handicap'}
                 </button>
@@ -129,7 +129,7 @@ export default function EditHandicap() {
                     type="button"
                     disabled={saving}
                     onClick={cancel}
-                    className="rounded-lg border border-gray-300 px-4 py-2 font-medium"
+                    className="rounded-lg border border-baggygolf-line px-4 py-2 font-medium"
                 >
                     Cancel
                 </button>

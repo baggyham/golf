@@ -57,13 +57,13 @@ export default function ChangePassword() {
     return (
         <form
             onSubmit={handleSubmit}
-            className="space-y-4 rounded-xl border border-gray-200 bg-white p-5"
+            className="space-y-4 rounded-xl border border-baggygolf-line bg-baggygolf-surface p-5"
         >
             <div>
-                <h2 className="text-lg font-semibold text-fairway-950">
+                <h2 className="text-lg font-semibold text-baggygolf-950">
                     Change password
                 </h2>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-baggygolf-muted">
                     Enter your current password to set a new one.
                 </p>
             </div>
@@ -79,7 +79,7 @@ export default function ChangePassword() {
                     required
                     value={currentPassword}
                     onChange={(event) => setCurrentPassword(event.target.value)}
-                    className="w-full rounded-lg border border-gray-300 p-3"
+                    className="w-full rounded-lg border border-baggygolf-line p-3"
                 />
             </div>
 
@@ -95,7 +95,7 @@ export default function ChangePassword() {
                     required
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
-                    className="w-full rounded-lg border border-gray-300 p-3"
+                    className="w-full rounded-lg border border-baggygolf-line p-3"
                 />
             </div>
 
@@ -110,7 +110,7 @@ export default function ChangePassword() {
                     required
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
-                    className="w-full rounded-lg border border-gray-300 p-3"
+                    className="w-full rounded-lg border border-baggygolf-line p-3"
                 />
             </div>
 
@@ -129,7 +129,7 @@ export default function ChangePassword() {
             <button
                 type="submit"
                 disabled={loading}
-                className="rounded-lg bg-fairway-950 px-5 py-3 font-semibold text-white disabled:opacity-50"
+                className="rounded-lg bg-baggygolf-primary px-5 py-3 font-semibold text-white disabled:opacity-50"
             >
                 {loading ? 'Updating...' : 'Update password'}
             </button>

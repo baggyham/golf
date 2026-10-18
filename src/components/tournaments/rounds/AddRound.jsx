@@ -37,9 +37,9 @@ export default function AddRound({ tournament, onCreated }) {
     return (
         <form
             onSubmit={handleSubmit}
-            className="space-y-4 rounded-xl border border-gray-200 bg-white p-5"
+            className="space-y-4 rounded-xl border border-baggygolf-line bg-baggygolf-surface p-5"
         >
-            <h3 className="text-lg font-semibold text-fairway-950">
+            <h3 className="text-lg font-semibold text-baggygolf-950">
                 Add round
             </h3>
 
@@ -54,7 +54,7 @@ export default function AddRound({ tournament, onCreated }) {
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     placeholder="e.g. Round 1"
-                    className="w-full rounded-lg border border-gray-300 p-3"
+                    className="w-full rounded-lg border border-baggygolf-line p-3"
                 />
             </div>
 
@@ -70,7 +70,7 @@ export default function AddRound({ tournament, onCreated }) {
                     max={tournament.endDate}
                     value={date}
                     onChange={(event) => setDate(event.target.value)}
-                    className="w-full rounded-lg border border-gray-300 p-3"
+                    className="w-full rounded-lg border border-baggygolf-line p-3"
                 />
             </div>
 
@@ -84,9 +84,9 @@ export default function AddRound({ tournament, onCreated }) {
                     value={courseName}
                     onChange={(event) => setCourseName(event.target.value)}
                     placeholder="Course name"
-                    className="w-full rounded-lg border border-gray-300 p-3"
+                    className="w-full rounded-lg border border-baggygolf-line p-3"
                 />
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-baggygolf-muted">
                     We'll connect this to your saved course library later.
                 </p>
             </div>
@@ -100,7 +100,7 @@ export default function AddRound({ tournament, onCreated }) {
             <button
                 type="submit"
                 disabled={saving}
-                className="rounded-lg bg-fairway-950 px-5 py-3 font-semibold text-white disabled:opacity-50"
+                className="rounded-lg bg-baggygolf-primary px-5 py-3 font-semibold text-white disabled:opacity-50"
             >
                 {saving ? 'Adding round...' : 'Add round'}
             </button>

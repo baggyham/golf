@@ -2,10 +2,20 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 const ThemeContext = createContext(null);
 const STORAGE_KEY = 'baggygolf-appearance';
+const LEGACY_STORAGE_KEYS = ['fairway-appearance', 'fairway-theme'];
 const DEFAULT_THEME = { primary: '#173D30', accent: '#D9BA77' };
 
 function initialPreference() {
-  try { return ['light', 'dark', 'system'].includes(localStorage.getItem(STORAGE_KEY)) ? localStorage.getItem(STORAGE_KEY) : 'system'; }
+  try {
+    const valid = (value) => ['light', 'dark', 'system'].includes(value);
+    const current = localStorage.getItem(STORAGE_KEY);
+    if (valid(current)) return current;
+    for (const key of LEGACY_STORAGE_KEYS) {
+      const old = localStorage.getItem(key);
+      if (valid(old)) { localStorage.setItem(STORAGE_KEY, old); return old; }
+    }
+    return 'system';
+  }
   catch { return 'system'; }
 }
 

@@ -11,22 +11,22 @@ export default function AccountPage({ onBack, onOpenTournament }) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <button type="button" onClick={onBack} className="text-sm font-semibold text-fairway-800 hover:underline">
+      <button type="button" onClick={onBack} className="text-sm font-semibold text-baggygolf-800 hover:underline">
         ← Back to Home
       </button>
       <header>
-        <h1 className="text-2xl font-bold text-fairway-950">Your account</h1>
-        <p className="mt-1 text-sm text-gray-500">Personal details and security settings.</p>
+        <h1 className="text-2xl font-bold text-baggygolf-950">Your account</h1>
+        <p className="mt-1 text-sm text-baggygolf-muted">Personal details and security settings.</p>
       </header>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="text-lg font-semibold text-fairway-950">Personal details</h2>
+      <section className="rounded-xl border border-baggygolf-line bg-baggygolf-surface p-5">
+        <h2 className="text-lg font-semibold text-baggygolf-950">Personal details</h2>
         <dl className="mt-4 space-y-3 text-sm">
           <div className="flex justify-between gap-3">
-            <dt className="text-gray-500">Name</dt><dd className="font-medium">{player.displayName}</dd>
+            <dt className="text-baggygolf-muted">Name</dt><dd className="font-medium">{player.displayName}</dd>
           </div>
           <div className="flex justify-between gap-3">
-            <dt className="text-gray-500">Username</dt><dd className="font-medium">@{player.username}</dd>
+            <dt className="text-baggygolf-muted">Username</dt><dd className="font-medium">@{player.username}</dd>
           </div>
         </dl>
       </section>
@@ -35,9 +35,9 @@ export default function AccountPage({ onBack, onOpenTournament }) {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold text-fairway-950">Security</h2>
+          <h2 className="text-lg font-semibold text-baggygolf-950">Security</h2>
           <button type="button" onClick={() => setShowPasswordForm((value) => !value)}
-            className="text-sm font-semibold text-fairway-800 hover:underline">
+            className="text-sm font-semibold text-baggygolf-800 hover:underline">
             {showPasswordForm ? 'Cancel' : 'Change password'}
           </button>
         </div>

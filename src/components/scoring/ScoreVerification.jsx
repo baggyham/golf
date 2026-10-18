@@ -84,10 +84,10 @@ export default function ScoreVerification({ tournament, round }) {
   const isRevision = Boolean(officialForPlayer);
   const differs = isRevision && scores.some((score, i) => score !== officialForPlayer.holes[i]);
   return (
-    <section className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
+    <section className="space-y-4 rounded-xl border border-baggygolf-line bg-baggygolf-surface p-4">
       <div>
         <h3 className="font-semibold">Score verification</h3>
-        <p className="text-sm text-gray-500">{verifiedCount}/{Object.keys(tournament.participants ?? {}).length} players confirmed</p>
+        <p className="text-sm text-baggygolf-muted">{verifiedCount}/{Object.keys(tournament.participants ?? {}).length} players confirmed</p>
       </div>
       <label className="block text-sm font-medium">Player
         <select className="mt-1 w-full rounded border p-3" value={playerId} onChange={(event) => setPlayerId(event.target.value)}>
@@ -96,15 +96,15 @@ export default function ScoreVerification({ tournament, round }) {
           ))}
         </select>
       </label>
-      {!ready && <p className="text-sm text-gray-500">Loading submissions…</p>}
+      {!ready && <p className="text-sm text-baggygolf-muted">Loading submissions…</p>}
       {ready && <>
-        <p className="text-sm text-gray-600">Self-entered scores take provisional priority. Check against marker or paper cards before confirming.</p>
+        <p className="text-sm text-baggygolf-muted">Self-entered scores take provisional priority. Check against marker or paper cards before confirming.</p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm"><thead><tr className="border-b text-left"><th className="p-2">Hole</th><th className="p-2">Submissions</th><th className="p-2">Official</th></tr></thead>
             <tbody>{reconciled.holes.map((hole, index) => (
               <tr key={index} className={`border-b ${hole.disputed ? 'bg-amber-50' : ''}`}>
                 <td className="p-2 font-medium">{index + 1}{hole.disputed ? ' ⚠' : ''}</td>
-                <td className="p-2 text-xs text-gray-700">
+                <td className="p-2 text-xs text-baggygolf-text">
                   {hole.submissions.length ? hole.submissions.map((submission) => (
                     <div key={submission.recordedBy}>
                       {tournament.participants[submission.recordedBy]?.displayName ?? 'Recorder'}: {submission.grossStrokes}
@@ -126,7 +126,7 @@ export default function ScoreVerification({ tournament, round }) {
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         {message && <p role="status" className="text-sm text-green-700">{message}</p>}
         <button type="button" onClick={handleConfirm} disabled={saving || !ready || (differs && !note.trim())}
-          className="rounded bg-fairway-950 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">
+          className="rounded bg-baggygolf-primary px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">
           {saving ? 'Saving…' : isRevision ? 'Update confirmed scorecard' : 'Confirm player scorecard'}
         </button>
       </>}

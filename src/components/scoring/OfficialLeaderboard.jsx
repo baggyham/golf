@@ -9,7 +9,7 @@ export default function OfficialLeaderboard({ tournament, round }) {
     try { return {rows:calculateOfficialLeaderboard(tournament,round,scores),calculationError:''}; }
     catch(err){ return {rows:[],calculationError:err.message}; }
   },[tournament,round,scores,loading,error]);
-  return <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-4" aria-label="Official round standings">
+  return <section className="space-y-3 rounded-xl border border-baggygolf-line bg-baggygolf-surface p-4" aria-label="Official round standings">
     <div className="flex justify-between"><h3 className="font-semibold">Official round standings</h3><span className="text-xs text-green-700">Verified</span></div>
     {loading && <p>Loading official results…</p>}
     {(error || result.calculationError) && <p role="alert" className="text-sm text-red-600">{error || result.calculationError}</p>}

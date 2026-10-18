@@ -25,16 +25,16 @@ export default function LoginForm() {
     }
 
     return (
-        <main className="flex min-h-screen items-center justify-center bg-fairway-50 p-4">
+        <main className="flex min-h-screen items-center justify-center bg-baggygolf-50 p-4">
             <form
                 onSubmit={handleSubmit}
-                className="w-full max-w-sm space-y-5 rounded-2xl bg-white p-6 shadow-lg"
+                className="w-full max-w-sm space-y-5 rounded-2xl bg-baggygolf-surface p-6 shadow-lg"
             >
                 <div>
-                    <h1 className="text-3xl font-bold text-fairway-950">
+                    <h1 className="text-3xl font-bold text-baggygolf-950">
                         baggygolf
                     </h1>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-baggygolf-muted">
                         Sign in
                     </p>
                 </div>
@@ -52,7 +52,7 @@ export default function LoginForm() {
                         autoComplete="username"
                         value={username}
                         onChange={(event) => setUsername(event.target.value)}
-                        className="w-full rounded-lg border border-gray-300 p-3"
+                        className="w-full rounded-lg border border-baggygolf-line p-3"
                         required
                     />
                 </div>
@@ -71,7 +71,7 @@ export default function LoginForm() {
                         autoComplete="current-password"
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}
-                        className="w-full rounded-lg border border-gray-300 p-3"
+                        className="w-full rounded-lg border border-baggygolf-line p-3"
                         required
                     />
                 </div>
@@ -85,7 +85,7 @@ export default function LoginForm() {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full rounded-lg bg-fairway-950 p-3 font-semibold text-white hover:bg-fairway-800 disabled:opacity-50"
+                    className="w-full rounded-lg bg-baggygolf-primary p-3 font-semibold text-white hover:bg-baggygolf-primary-hover disabled:opacity-50"
                 >
                     {loading ? 'Signing in...' : 'Sign in'}
                 </button>

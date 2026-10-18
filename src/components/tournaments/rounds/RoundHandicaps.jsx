@@ -54,7 +54,7 @@ export default function RoundHandicaps({
     const participants = Object.entries(tournament.participants ?? {});
 
     return (
-        <section className="space-y-4 rounded-lg bg-gray-50 p-4">
+        <section className="space-y-4 rounded-lg bg-baggygolf-bg p-4">
             <h4 className="font-semibold">Round handicaps</h4>
 
             {isCourseMode && isOrganiser && round.status === 'draft' && (
@@ -70,7 +70,7 @@ export default function RoundHandicaps({
                                 required
                                 value={courseRating}
                                 onChange={(event) => setCourseRating(event.target.value)}
-                                className="mt-1 w-full rounded border border-gray-300 p-2"
+                                className="mt-1 w-full rounded border border-baggygolf-line p-2"
                             />
                         </label>
 
@@ -84,7 +84,7 @@ export default function RoundHandicaps({
                                 required
                                 value={slopeRating}
                                 onChange={(event) => setSlopeRating(event.target.value)}
-                                className="mt-1 w-full rounded border border-gray-300 p-2"
+                                className="mt-1 w-full rounded border border-baggygolf-line p-2"
                             />
                         </label>
                     </div>
@@ -92,7 +92,7 @@ export default function RoundHandicaps({
                     <button
                         type="submit"
                         disabled={saving}
-                        className="rounded bg-fairway-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                        className="rounded bg-baggygolf-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                     >
                         {saving ? 'Saving...' : 'Save tee ratings'}
                     </button>
@@ -106,7 +106,7 @@ export default function RoundHandicaps({
             )}
 
             {isCourseMode && round.teeRatings && (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-baggygolf-muted">
                     Course Rating: {round.teeRatings.courseRating}
                     {' · '}
                     Slope Rating: {round.teeRatings.slopeRating}
@@ -131,13 +131,13 @@ export default function RoundHandicaps({
                         return (
                             <div
                                 key={playerId}
-                                className="flex items-center justify-between border-b border-gray-200 py-2"
+                                className="flex items-center justify-between border-b border-baggygolf-line py-2"
                             >
                                 <div>
                                     <p className="font-medium">
                                         {participant.displayName}
                                     </p>
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-baggygolf-muted">
                                         Tournament HI: {participant.handicapIndexSnapshot ?? '—'}
                                     </p>
                                 </div>
@@ -146,7 +146,7 @@ export default function RoundHandicaps({
                                     <p className="text-lg font-bold">
                                         {playingHandicap ?? '—'}
                                     </p>
-                                    <p className="text-xs text-gray-500">
+                                    <p className="text-xs text-baggygolf-muted">
                                         Playing Handicap
                                     </p>
                                 </div>
@@ -157,7 +157,7 @@ export default function RoundHandicaps({
             )}
 
             {!round.scorecard && (
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-baggygolf-muted">
                     Configure the round scorecard to see handicaps.
                 </p>
             )}

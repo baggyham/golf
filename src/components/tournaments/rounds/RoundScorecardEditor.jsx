@@ -71,7 +71,7 @@ export default function RoundScorecardEditor({
                 <h3 className="text-lg font-semibold">
                     {round.name} — Scorecard setup
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-baggygolf-muted">
                     Total par: {totalPar}
                 </p>
             </div>
@@ -100,7 +100,7 @@ export default function RoundScorecardEditor({
                                     onChange={(event) =>
                                         updateHole(index, 'par', event.target.value)
                                     }
-                                    className="w-full rounded border border-gray-300 p-2"
+                                    className="w-full rounded border border-baggygolf-line p-2"
                                 >
                                     {[3, 4, 5, 6].map((par) => (
                                         <option key={par} value={par}>
@@ -121,7 +121,7 @@ export default function RoundScorecardEditor({
                                             event.target.value,
                                         )
                                     }
-                                    className="w-full rounded border border-gray-300 p-2"
+                                    className="w-full rounded border border-baggygolf-line p-2"
                                 >
                                     {Array.from({ length: 18 }, (_, i) => i + 1).map(
                                         (strokeIndex) => (
@@ -164,7 +164,7 @@ export default function RoundScorecardEditor({
                     !strokeIndicesUnique ||
                     round.status !== 'draft'
                 }
-                className="rounded-lg bg-fairway-950 px-5 py-3 font-semibold text-white disabled:opacity-50"
+                className="rounded-lg bg-baggygolf-primary px-5 py-3 font-semibold text-white disabled:opacity-50"
             >
                 {saving ? 'Saving...' : 'Save scorecard'}
             </button>

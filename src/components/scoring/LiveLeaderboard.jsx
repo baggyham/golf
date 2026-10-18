@@ -13,12 +13,12 @@ export default function LiveLeaderboard({ tournament, round }) {
   }, [tournament, round, entries]);
 
   return (
-    <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-4" aria-label="Live leaderboard">
+    <section className="space-y-3 rounded-xl border border-baggygolf-line bg-baggygolf-surface p-4" aria-label="Live leaderboard">
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold">Live leaderboard</h3>
-        <span className="text-xs text-gray-500">Provisional</span>
+        <span className="text-xs text-baggygolf-muted">Provisional</span>
       </div>
-      {loading && <p className="text-sm text-gray-500">Loading live scores…</p>}
+      {loading && <p className="text-sm text-baggygolf-muted">Loading live scores…</p>}
       {(error || calculationError) && <p role="alert" className="text-sm text-red-600">{error || calculationError}</p>}
       {!loading && !error && !calculationError && (
         <div className="overflow-x-auto">
@@ -38,7 +38,7 @@ export default function LiveLeaderboard({ tournament, round }) {
           </table>
         </div>
       )}
-      <p className="text-xs text-gray-500">Self-entered scores take priority. Disputed and incomplete results are not official. Rankings use total points; ties are provisional.</p>
+      <p className="text-xs text-baggygolf-muted">Self-entered scores take priority. Disputed and incomplete results are not official. Rankings use total points; ties are provisional.</p>
     </section>
   );
 }

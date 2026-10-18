@@ -16,7 +16,7 @@ export default function TournamentStandings({ tournament, onOpenTournament, show
   return (
     <section className="mt-4 space-y-3" aria-label="Tournament standings">
       <div className="flex items-center justify-between gap-2">
-        <h4 className="font-semibold text-fairway-950">Overall standings</h4>
+        <h4 className="font-semibold text-baggygolf-950">Overall standings</h4>
         <span className="text-xs text-amber-700">{rows.some((row) => row.hasProvisional) ? 'Includes provisional scores' : 'Official completed rounds only'}</span>
       </div>
       {activeRound && <p className="text-sm text-slate-600">Current round: {activeRound.name}</p>}
@@ -36,7 +36,7 @@ export default function TournamentStandings({ tournament, onOpenTournament, show
         </div>
       )}
       <p className="text-xs text-slate-500">Completed rounds use organiser-verified scores; active and awaiting-verification rounds use provisional scores. Total includes both. Ties use scored-hole count for display only.</p>
-      {showOpenAction && onOpenTournament && <button type="button" onClick={() => onOpenTournament(tournament.id)} className="min-h-11 rounded-lg bg-fairway-950 px-4 text-sm font-semibold text-white">Open tournament / Enter scores →</button>}
+      {showOpenAction && onOpenTournament && <button type="button" onClick={() => onOpenTournament(tournament.id)} className="min-h-11 rounded-lg bg-baggygolf-primary px-4 text-sm font-semibold text-white">Open tournament / Enter scores →</button>}
     </section>
   );
 }

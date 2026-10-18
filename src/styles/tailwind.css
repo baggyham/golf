@@ -1,21 +1,23 @@
 @import 'tailwindcss';
-/* Centralised visual tokens. All screens use these Tailwind colour names. */
-@theme {
-  --color-fairway-950: #173d30;
-  --color-fairway-800: #286348;
-  --color-fairway-100: #eaf3eb;
-  --color-fairway-50: #f4f7f3;
+/* Semantic Tailwind utilities read the resolved light/dark palette at runtime. */
+@theme inline {
+  --color-baggygolf-950: var(--ink);
+  --color-baggygolf-800: var(--primary);
+  --color-baggygolf-100: var(--surface-soft);
+  --color-baggygolf-50: var(--bg);
+  --color-baggygolf-bg: var(--bg);
+  --color-baggygolf-surface: var(--surface);
+  --color-baggygolf-soft: var(--surface-soft);
+  --color-baggygolf-text: var(--ink);
+  --color-baggygolf-muted: var(--muted);
+  --color-baggygolf-line: var(--line);
+  --color-baggygolf-primary: var(--primary);
+  --color-baggygolf-primary-hover: var(--primary-hover);
+  --color-baggygolf-on-primary: var(--on-primary);
+  --color-baggygolf-gold: var(--gold);
 }
 @layer base {
-  :root {
-    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  }
-  body {
-    margin: 0;
-  }
-  button,
-  input,
-  select {
-    font: inherit;
-  }
+  :root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+  body { margin: 0; }
+  button, input, select, textarea { font: inherit; }
 }
