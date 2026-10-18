@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth.js';
 import { useCareerStats } from '../hooks/useCareerStats.js';
 import { getMyTournaments } from '../repositories/tournamentRepository.js';
 import { getRecentFinishes, ordinalFinish } from '../lib/recentForm.js';
-import TournamentStandings from '../components/scoring/TournamentStandings.jsx';
+import LiveLeaderboardStage from '../components/scoring/LiveLeaderboardStage.jsx';
 
 const LIVE = new Set(['in_progress', 'in-progress', 'active', 'live']);
 const PAST = new Set(['completed', 'finished', 'finalised', 'finalized']);
@@ -97,17 +97,15 @@ export default function HomePage({ onNavigate, onOpenTournament, onActiveTournam
   const latest = past[0];
   const tournament = latest;
   // While a tournament is running, Home is the Leaderboard tab: no career dashboard.
-  if (active) return <div className="mx-auto flex h-full min-h-0 max-w-3xl flex-col gap-2 sm:gap-3">
-    <header className="flex shrink-0 items-center justify-between gap-3">
+  if (active) return <div className="live-home mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col gap-3">
+    <header className="live-home-heading shrink-0">
       <div className="min-w-0">
-        <p className="baggy-gold text-[10px] font-bold uppercase tracking-widest">Live leaderboard</p>
-        <h1 className="truncate text-xl font-bold leading-tight sm:text-2xl">{active.name}</h1>
+        <p className="baggy-gold text-[11px] font-extrabold uppercase tracking-[0.2em]">{active.tier === 'major' ? 'Major championship' : 'Competition in progress'}</p>
+        <h1 className="truncate text-2xl font-black tracking-tight sm:text-4xl">{active.name}</h1>
       </div>
-      {active.createdBy === user?.uid && <button type="button" onClick={() => onManageTournament(active.id)} className="shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold" style={{borderColor:'var(--line)'}}>Manage</button>}
+      {active.createdBy === user?.uid && <button type="button" onClick={() => onManageTournament(active.id)} className="live-manage-button shrink-0 rounded-xl border px-3 py-2 text-xs font-bold" style={{borderColor:'var(--line)'}}>Manage</button>}
     </header>
-    <section aria-label="Live tournament leaderboard" className="baggy-surface min-h-0 flex-1 overflow-y-auto rounded-xl p-3 sm:p-4">
-      <TournamentStandings tournament={active} showOpenAction={false} />
-    </section>
+    <LiveLeaderboardStage tournament={active}/>
     {error && <p role="alert" className="shrink-0 text-xs text-red-600">{error}</p>}
   </div>;
   return <div className="mx-auto flex h-full min-h-0 max-w-3xl flex-col gap-2 sm:gap-3">

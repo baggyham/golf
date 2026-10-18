@@ -163,3 +163,35 @@
   --primary: inherit;
   --gold: inherit;
 }
+
+/* Live tournament leaderboard: immersive, viewport-filling, theme-aware. */
+.live-main-viewport { height: calc(100dvh - 150px); min-height: 360px; display:flex; flex-direction:column; }
+.live-home { flex: 1; }
+.live-home-heading { display:flex; justify-content:space-between; align-items:center; gap:0.75rem; }
+.live-manage-button { background:var(--surface); color:var(--ink); }
+.live-stage { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; border-radius:1.25rem; border-color:var(--line); }
+.live-stage-top { padding:0.9rem 1rem 0.75rem; border-bottom:1px solid var(--line); background:var(--surface-soft); }
+.live-stage-eyebrow { color:var(--primary); font-weight:900; font-size:0.77rem; letter-spacing:0.19em; display:flex; align-items:center; gap:0.55rem; }
+.baggy-theme[data-appearance="dark"] .live-stage-eyebrow { color:var(--gold); }
+.live-pulse { width:0.55rem; height:0.55rem; border-radius:50%; background:var(--gold); box-shadow:0 0 0 3px color-mix(in srgb,var(--gold) 22%,transparent); }
+.live-stage-subtitle { color:var(--muted); font-size:0.75rem; margin-top:0.32rem; }
+.live-stage-list { min-height:0; flex:1; overflow-y:auto; display:flex; flex-direction:column; }
+.live-competitor { flex:1; min-height:95px; display:flex; justify-content:space-between; align-items:center; gap:1rem; padding:1rem 1.15rem; border-bottom:1px solid var(--line); }
+.live-competitor:last-child { border-bottom:none; }
+.live-competitor-leader { background:color-mix(in srgb,var(--gold) 12%,var(--surface)); border-left:5px solid var(--gold); padding-left:calc(1.15rem - 5px); }
+.live-competitor-identity { min-width:0; display:flex; align-items:center; gap:0.9rem; }
+.live-rank { flex-shrink:0; height:2.55rem; width:2.55rem; border-radius:0.75rem; display:grid; place-items:center; background:var(--surface-soft); color:var(--ink); font-size:1.05rem; font-weight:900; }
+.live-rank-first { background:var(--gold); color:var(--bg); font-size:1.4rem; }
+.live-competitor-name { color:var(--ink); font-size:clamp(1.05rem,4.8vw,1.55rem); font-weight:850; line-height:1.15; overflow-wrap:anywhere; }
+.live-competitor-meta { color:var(--muted); font-size:0.69rem; margin-top:0.38rem; }
+.live-competitor-score { flex-shrink:0; text-align:right; }
+.live-competitor-points { color:var(--ink); font-size:clamp(2rem,7vw,3.25rem); font-weight:900; letter-spacing:-0.055em; line-height:0.95; }
+.live-competitor-leader .live-competitor-points { color:var(--gold); }
+.live-competitor-points-label { color:var(--muted); font-size:0.62rem; letter-spacing:0.1em; font-weight:800; margin-top:0.3rem; }
+.live-competitor-gap { color:var(--muted); font-size:0.67rem; font-weight:800; margin-top:0.4rem; }
+.live-stage-footer { flex-shrink:0; padding:0.65rem 1rem; color:var(--muted); font-size:0.65rem; border-top:1px solid var(--line); }
+@media (min-width:640px) { .live-main-viewport { height:calc(100dvh - 160px); } .live-competitor { padding-inline:1.75rem; } .live-stage-top { padding:1rem 1.75rem; } }
+@media (max-height:680px) { .live-main-viewport { min-height:0; } .live-competitor { min-height:72px; padding-block:0.55rem; } .live-stage-top { padding-block:0.55rem; } .live-stage-footer { padding-block:0.35rem; } }
+/* Account for the fixed mobile tab bar while reserving all remaining space. */
+@media (max-width:639px) { .live-main-viewport { height:calc(100dvh - 68px - 64px - env(safe-area-inset-bottom)); padding-top:0.75rem !important; padding-bottom:0.75rem !important; } }
+@media (min-width:640px) { .live-main-viewport { height:calc(100dvh - 130px); padding-top:1rem !important; padding-bottom:1rem !important; } }
