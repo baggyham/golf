@@ -275,13 +275,11 @@ export default function ScoreEntry({ tournament, round }) {
 
   return (
     <section
-      className={showSummary ? 'space-y-3 rounded-2xl p-2 sm:p-4' : 'flex min-h-0 flex-col gap-2 rounded-2xl p-2 sm:gap-3 sm:p-4'}
+      className={showSummary ? 'flex h-full min-h-0 flex-col gap-2 overflow-hidden rounded-2xl p-2 sm:p-4' : `live-score-entry flex h-full min-h-0 flex-col gap-2 ${error || Object.keys(conflicts).length || statuses.includes('offline') || statuses.includes('error') ? 'overflow-y-auto' : 'overflow-hidden'} rounded-2xl p-2 sm:gap-3 sm:p-4`}
       style={{
         background: 'var(--bg, #F6F4EB)',
         color: 'var(--ink, #173D30)',
-        // Account for the app header, main padding and fixed mobile bottom nav.
-        // Every participant count shares the same available height.
-        ...(showSummary ? {} : { height: 'calc(100dvh - 190px)', minHeight: '280px' }),
+        // Fill the height allocated by the shell instead of guessing a viewport offset.
       }}
     >
       <div className="flex shrink-0 items-center justify-between gap-2">
@@ -293,7 +291,7 @@ export default function ScoreEntry({ tournament, round }) {
       </div>
 
       {showSummary ? (
-        loading ? <p role="status">Loading scorecards…</p> : <RoundSummary tournament={tournament} round={round} participants={participants} cards={cards} onSelectHole={(index) => { setHoleIndex(index); setShowSummary(false); }} />
+        loading ? <p role="status">Loading scorecards…</p> : <div className="min-h-0 flex-1"><RoundSummary tournament={tournament} round={round} participants={participants} cards={cards} onSelectHole={(index) => { setHoleIndex(index); setShowSummary(false); }} /></div>
       ) : (<>
         <div ref={holeStripRef} role="group" aria-label="Choose a hole" className="flex w-full shrink-0 snap-x snap-mandatory gap-1.5 overflow-x-auto overscroll-x-contain pb-1" style={{ touchAction: 'pan-x', scrollbarWidth: 'none' }}>
           {holes.map((h, i) => {
@@ -311,16 +309,17 @@ export default function ScoreEntry({ tournament, round }) {
         </div>
 
         {loading ? <p role="status">Loading scorecards…</p> : (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border" style={{ background: 'var(--surface, white)', borderColor: 'var(--line, #E1E6DA)' }}>
-            <div className="flex shrink-0 items-center justify-between px-3 py-4 sm:py-5" style={{ background: 'var(--primary, #173D30)', color: 'var(--on-primary, #FFFFFF)' }}>
+          <div className="live-score-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border" style={{ background: 'var(--surface, white)', borderColor: 'var(--line, #E1E6DA)' }}>
+            <div className="live-score-hole flex shrink-0 items-center justify-between px-3 py-4 sm:py-5" style={{ background: 'var(--primary, #173D30)', color: 'var(--on-primary, #FFFFFF)' }}>
               <button type="button" aria-label="Previous hole" disabled={holeIndex === 0} onClick={() => setHoleIndex((n) => n - 1)} className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 text-xl disabled:opacity-30">‹</button>
               <div className="text-center">
+                <p className="live-score-eyebrow">LIVE SCORING</p>
                 <p className="text-2xl font-bold leading-tight">Hole {hole.number ?? holeIndex + 1} <span className="text-sm font-normal opacity-75">/ 18</span></p>
                 <p className="mt-1 text-xs opacity-80">Par {hole.par} · SI {hole.strokeIndex} · {recordedCount}/{participants.length} entered</p>
               </div>
               <button type="button" aria-label="Next hole" disabled={holeIndex === 17} onClick={() => setHoleIndex((n) => n + 1)} className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 text-xl disabled:opacity-30">›</button>
             </div>
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {participants.map(([id, participant], playerIndex) => {
               const strokes = cardFor(id)[holeIndex];
               let points = null;
@@ -333,9 +332,9 @@ export default function ScoreEntry({ tournament, round }) {
               const name = participant.displayName ?? 'Player';
               const pickedUp = strokes === 'pickup';
               return (
-                <div key={id} className={`flex min-h-[74px] min-w-0 flex-1 items-center gap-2 px-3 py-2 ${playerIndex ? 'border-t' : ''}`} style={{ borderColor: 'var(--line, #E1E6DA)' }}>
+                <div key={id} className={`live-score-player flex min-h-0 min-w-0 flex-1 items-center gap-2 px-3 py-1.5 sm:py-2 ${playerIndex ? 'border-t' : ''}`} style={{ borderColor: 'var(--line, #E1E6DA)' }}>
                   <div className="min-w-0 flex-1 self-stretch flex flex-col justify-center gap-1.5">
-                    <p className="truncate text-[13px] leading-tight font-semibold" title={name}>{name}</p>
+                    <p className="live-score-player-name truncate text-[13px] leading-tight font-semibold" title={name}>{name}</p>
                     <div className="flex h-2 items-center gap-1" title={shotsReceived == null ? 'Handicap shots unavailable' : `${shotsReceived} handicap strokes on this hole`} aria-label={shotsReceived == null ? 'Handicap strokes unavailable' : `${shotsReceived} handicap strokes on this hole`}>
                       {shotsReceived != null && shotsReceived > 0 && Array.from({ length: Math.min(shotsReceived, 5) }, (_, n) => (
                         <span key={n} aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--primary, #173D30)' }} />
@@ -350,7 +349,7 @@ export default function ScoreEntry({ tournament, round }) {
                       {pickedUp ? 'Picked up' : 'Pick up'}
                     </button>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+                  <div className="live-score-controls flex shrink-0 items-center gap-1 sm:gap-1.5">
                     <button type="button" aria-label={`Remove one stroke for ${name}`} disabled={!canEdit || Boolean(conflicts[id]) || strokes === 1}
                       className="flex h-10 w-10 items-center justify-center rounded-full text-xl font-semibold disabled:opacity-35" style={{ background: 'var(--surface-soft, #EDF0E8)' }}
                       onClick={() => updateScore(id, typeof strokes === 'number' ? Math.max(1, strokes - 1) : Math.max(1, hole.par - 1))}>−</button>
@@ -358,7 +357,7 @@ export default function ScoreEntry({ tournament, round }) {
                     <button type="button" aria-label={`Add one stroke for ${name}`} disabled={!canEdit || Boolean(conflicts[id]) || strokes === 30}
                       className="flex h-10 w-10 items-center justify-center rounded-full text-xl font-semibold disabled:opacity-35" style={{ background: 'var(--surface-soft, #EDF0E8)' }}
                       onClick={() => updateScore(id, typeof strokes === 'number' ? Math.min(30, strokes + 1) : hole.par)}>+</button>
-                    <div className="flex h-12 w-10 shrink-0 flex-col items-center justify-center text-center sm:w-11" style={{ color: 'var(--ink, #173D30)' }} aria-label={points == null ? 'Points not yet available' : `${points} Stableford points`}>
+                    <div className="live-score-points flex h-12 w-10 shrink-0 flex-col items-center justify-center text-center sm:w-11" style={{ color: 'var(--ink, #173D30)' }} aria-label={points == null ? 'Points not yet available' : `${points} Stableford points`}>
                       <p className="text-xl leading-none font-extrabold tabular-nums sm:text-2xl">{points ?? '—'}</p>
                       <p className="mt-1 text-[10px] font-semibold opacity-80">pts</p>
                     </div>

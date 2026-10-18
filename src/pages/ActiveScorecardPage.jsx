@@ -34,9 +34,9 @@ export default function ActiveScorecardPage({ tournamentId }) {
     eligible.find((item) => item.status === 'in_progress') ?? eligible[0];
 
   return (
-    <div className="tournament-scope mx-auto max-w-3xl space-y-4" style={tournamentTheme(state.tournament)}>
+    <div className="tournament-scope mx-auto flex h-full min-h-0 max-w-3xl flex-col gap-2" style={tournamentTheme(state.tournament)}>
       {eligible.length > 1 && (
-        <div className="baggy-surface rounded-xl p-3">
+        <div className="baggy-surface shrink-0 rounded-xl p-2">
           <label htmlFor="active-round" className="mb-1 block text-sm font-semibold">Round</label>
           <select id="active-round" value={round?.id ?? ''}
             onChange={(event) => setSelectedRoundId(event.target.value)}
@@ -45,7 +45,7 @@ export default function ActiveScorecardPage({ tournamentId }) {
           </select>
         </div>
       )}
-      {round ? <ScoreEntry key={`${tournamentId}:${round.id}`} tournament={state.tournament} round={round} /> : (
+      {round ? <div className="min-h-0 flex-1"><ScoreEntry key={`${tournamentId}:${round.id}`} tournament={state.tournament} round={round} /></div> : (
         <section className="baggy-surface rounded-xl p-5">
           <h1 className="text-xl font-semibold">No round open for scoring</h1>
           <p className="baggy-muted mt-2 text-sm">Score entry will be available when a round starts and its 18-hole scorecard is configured.</p>

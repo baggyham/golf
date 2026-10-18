@@ -1,0 +1,41 @@
+/* Keep both tournament tabs within the app viewport. */
+.live-main-viewport {
+  width: 100%;
+  min-width: 0;
+  max-width: 64rem;
+  box-sizing: border-box;
+  overflow-x: clip;
+}
+.active-tournament-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+.active-tournament-heading { min-height: 3.35rem; min-width: 0; max-width: 100%; }
+.active-tournament-content,
+.active-tournament-content > div,
+.active-tournament-content .live-home,
+.active-tournament-content .tournament-scope,
+.active-tournament-content .live-score-entry,
+.active-tournament-content .live-score-panel,
+.active-tournament-content .live-score-player {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.active-tournament-content { width: 100%; overflow: hidden; }
+.active-tournament-content > div { width: 100%; }
+.active-tournament-content > div.hidden { display: none; }
+.active-tournament-content .live-home { width: 100%; }
+/* On narrow phones, reclaim a few pixels without changing tap-target heights. */
+@media (max-width: 390px) {
+  .active-tournament-content .live-score-player { gap: 0.25rem; padding-left: 0.5rem; padding-right: 0.5rem; }
+  .active-tournament-content .live-score-controls { gap: 0.125rem; }
+  .active-tournament-content .live-score-controls > button { width: 2.25rem; min-width: 2.25rem; }
+  .active-tournament-content .live-score-controls > span { margin-left: 0.25rem; margin-right: 0.25rem; min-width: 2rem; }
+  .active-tournament-content .live-score-points { width: 2rem; }
+}
+@media (min-width: 640px) { .active-tournament-heading { min-height: 3.7rem; } }

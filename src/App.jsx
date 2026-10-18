@@ -8,6 +8,8 @@ import CreateTournament from './components/tournaments/CreateTournament.jsx';
 import TournamentList from './components/tournaments/TournamentList.jsx';
 import TournamentOverview from './components/tournaments/TournamentOverview.jsx';
 import ActiveScorecardPage from './pages/ActiveScorecardPage.jsx';
+import ActiveTournamentLayout from './components/layout/ActiveTournamentLayout.jsx';
+import './styles/active-tournament.css';
 
 export default function App() {
   const { setActiveMajorId } = useTheme();
@@ -17,7 +19,9 @@ export default function App() {
   const [draftManagementOpen, setDraftManagementOpen] = useState(false);
   const onActiveTournamentChange = useCallback((t) => setActiveTournament(t), []);
   useEffect(() => {
-    const major = activeTournament && tournamentTier(activeTournament) === 'major' ? majorThemeById(activeTournament.majorThemeId) : null;
+    const major = activeTournament && tournamentTier(activeTournament) === 'major'
+      ? majorThemeById(activeTournament.majorThemeId)
+      : null;
     setActiveMajorId(major?.id ?? null);
     return () => setActiveMajorId(null);
   }, [activeTournament, setActiveMajorId]);
@@ -34,7 +38,10 @@ export default function App() {
 
   return (
     <AppShell activePage={activePage} onNavigate={navigate} activeTournament={activeTournament} hideNavigation={activePage === 'createTournament' || activePage === 'tournamentOverview'} hideHeader={activePage === 'createTournament' || (activePage === 'tournamentOverview' && draftManagementOpen)}>
-      {activePage === 'home' && <HomePage
+      {activeTournament && (activePage === 'home' || activePage === 'activeScorecard') ? (
+        <ActiveTournamentLayout tournament={activeTournament}>
+          <div className={activePage === 'home' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'} aria-hidden={activePage !== 'home'}>
+      <HomePage
         onActiveTournamentChange={onActiveTournamentChange}
         onNavigate={navigate}
         onManageTournament={(id) => { setSelectedTournamentId(id); setActivePage('tournamentOverview'); }}
@@ -42,7 +49,23 @@ export default function App() {
           setSelectedTournamentId(id);
           setActivePage('tournamentOverview');
         }}
-      />}
+      />
+          </div>
+          <div className={activePage === 'activeScorecard' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'} aria-hidden={activePage !== 'activeScorecard'}>
+            <ActiveScorecardPage tournamentId={activeTournament.id} />
+          </div>
+        </ActiveTournamentLayout>
+      ) : activePage === 'home' ? (
+      <HomePage
+        onActiveTournamentChange={onActiveTournamentChange}
+        onNavigate={navigate}
+        onManageTournament={(id) => { setSelectedTournamentId(id); setActivePage('tournamentOverview'); }}
+        onOpenTournament={(id) => {
+          setSelectedTournamentId(id);
+          setActivePage('tournamentOverview');
+        }}
+      />
+      ) : null}
       {activePage === 'profile' && <AccountPage onBack={() => navigate('home')} onOpenTournament={(id) => { setSelectedTournamentId(id); setActivePage('tournamentOverview'); }} />}
 
 
@@ -66,9 +89,6 @@ export default function App() {
         />
       )}
 
-      {activePage === 'activeScorecard' && activeTournament?.id && (
-        <ActiveScorecardPage tournamentId={activeTournament.id} />
-      )}
 
       {activePage === 'tournamentOverview' && selectedTournamentId && (
         <TournamentOverview

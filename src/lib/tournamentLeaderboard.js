@@ -33,5 +33,9 @@ export function calculateTournamentLeaderboard(tournament, roundsWithEntries) {
   }
   return [...totals.values()]
     .sort((a, b) => b.points-a.points || b.holesScored-a.holesScored || a.displayName.localeCompare(b.displayName) || a.playerId.localeCompare(b.playerId))
-    .map((row,i) => ({...row,position:i+1}));
+    .map((row, i, ranked) => ({
+      ...row,
+      // Shared scores use competition ranking (1, 1, 3).
+      position: ranked.findIndex(other => other.points === row.points) + 1,
+    }));
 }

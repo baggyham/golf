@@ -25,6 +25,12 @@ export default function GolfScorecardTable({ holes = [], players = [], onSelectH
   const line = 'var(--line, #dfe6df)';
   const soft = 'var(--surface-soft, #eff2ec)';
   const headerLine = 'rgba(255,255,255,.19)';
+  // A connected left-hand rail for hole information, separate from player scores.
+  const rail = 'var(--surface-soft, #eff2ec)';
+  const railHeader = 'var(--primary, #173d30)';
+  const railDivider = 'var(--muted, #667469)';
+  const railCell = { background: rail, borderColor: line };
+  const railEdge = { ...railCell, borderRight: `2px solid ${railDivider}` };
   const cell = 'border-r border-b py-[5px] px-[1px] text-center align-middle leading-none tabular-nums';
   const numberOfPlayers = Math.max(players.length, 1);
   const fixedWidth = 26;
@@ -35,11 +41,21 @@ export default function GolfScorecardTable({ holes = [], players = [], onSelectH
     return {};
   };
 
+  const columns = () => (
+    <colgroup>
+      <col style={{ width: '9%' }} /><col style={{ width: '8%' }} /><col style={{ width: '9%' }} />
+      {players.map((p) => <Fragment key={p.id}>
+        <col style={{ width: `${playerWidth * .52}%` }} />
+        <col style={{ width: `${playerWidth * .48}%` }} />
+      </Fragment>)}
+    </colgroup>
+  );
+
   const sectionRow = (label, from, to) => (
     <tr key={label} className="font-bold" style={{ background: soft }}>
-      <th scope="row" className={cell} style={{ borderColor: line }}>{label}</th>
-      <td className={cell} style={{ borderColor: line }}>{sum(holes.slice(from, to).map((h) => Number(h.par) || 0))}</td>
-      <td className={cell} style={{ borderColor: line }}>—</td>
+      <th scope="row" className={cell} style={railCell}>{label}</th>
+      <td className={cell} style={railCell}>{sum(holes.slice(from, to).map((h) => Number(h.par) || 0))}</td>
+      <td className={cell} style={railEdge}>—</td>
       {players.map((p) => <Fragment key={p.id}>
         <td className={cell} style={{ borderColor: line }}>{grossTotal(p.scores ?? [], from, to)}</td>
         <td className={`${cell} font-extrabold`} style={{ borderColor: line }}>{sum((p.points ?? []).slice(from, to))}</td>
@@ -48,20 +64,16 @@ export default function GolfScorecardTable({ holes = [], players = [], onSelectH
   );
 
   return (
-    <div className="w-full overflow-hidden rounded-lg border" style={{ borderColor: line, background: paper, color: ink }}>
-      <table className="w-full table-fixed border-collapse text-[10px] sm:text-xs" style={{ fontVariantNumeric: 'tabular-nums' }} aria-label="Round golf scorecard">
-        <colgroup>
-          <col style={{ width: '9%' }} /><col style={{ width: '8%' }} /><col style={{ width: '9%' }} />
-          {players.map((p) => <Fragment key={p.id}>
-            <col style={{ width: `${playerWidth * .52}%` }} />
-            <col style={{ width: `${playerWidth * .48}%` }} />
-          </Fragment>)}
-        </colgroup>
-        <thead style={{ background: primary, color: 'var(--on-primary, #fff)' }}>
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-lg border" style={{ borderColor: line, background: paper, color: ink }}>
+      <style>{'.baggygolf-paper-score-scroll::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }'}</style>
+      <div className="baggygolf-paper-score-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }} tabIndex={0} aria-label="Scrollable round scorecard">
+      <table className="min-h-full w-full table-fixed border-separate border-spacing-0 text-[10px] sm:text-xs" style={{ fontVariantNumeric: 'tabular-nums' }} aria-label="Round golf scorecard">
+        {columns()}
+        <thead className="sticky top-0 z-10" style={{ background: primary, color: 'var(--on-primary, #fff)' }}>
           <tr>
-            <th rowSpan={2} scope="col" className="border-r px-0.5 text-center text-[9px]" style={{ borderColor: headerLine }}>Hole</th>
-            <th rowSpan={2} scope="col" className="border-r px-0.5 text-center text-[9px]" style={{ borderColor: headerLine }}>Par</th>
-            <th rowSpan={2} scope="col" className="border-r px-0.5 text-center text-[9px]" style={{ borderColor: headerLine }}>SI</th>
+            <th rowSpan={2} scope="col" className="border-r px-0.5 text-center text-[9px]" style={{ borderColor: headerLine, background: railHeader }}>Hole</th>
+            <th rowSpan={2} scope="col" className="border-r px-0.5 text-center text-[9px]" style={{ borderColor: headerLine, background: railHeader }}>Par</th>
+            <th rowSpan={2} scope="col" className="border-r px-0.5 text-center text-[9px]" style={{ borderRight: `2px solid ${railDivider}`, background: railHeader }}>SI</th>
             {players.map((p) => <th key={p.id} colSpan={2} scope="colgroup" className="border-r px-0.5 py-2 text-center align-middle last:border-r-0" style={{ borderColor: headerLine }} title={p.name}>
               <span className="block break-words text-[9px] font-bold leading-[1.2] sm:text-[11px]">{p.name}</span>
               <span className="mt-1 block text-[8px] font-normal opacity-85">HCP {p.playingHandicap ?? '—'}</span>
@@ -76,12 +88,23 @@ export default function GolfScorecardTable({ holes = [], players = [], onSelectH
         </thead>
         <tbody>
           {holes.map((hole, i) => <Fragment key={i}>
-            <tr>
-              <th scope="row" className={`${cell} font-semibold`} style={{ borderColor: line }}>
-                {onSelectHole ? <button type="button" className="min-h-7 w-full font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px]" onClick={() => onSelectHole(i)} aria-label={`Edit hole ${i + 1}`}>{i + 1}</button> : i + 1}
+            <tr
+              onClick={onSelectHole ? () => onSelectHole(i) : undefined}
+              onKeyDown={onSelectHole ? (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onSelectHole(i);
+                }
+              } : undefined}
+              tabIndex={onSelectHole ? 0 : undefined}
+              aria-label={onSelectHole ? `Edit hole ${i + 1}` : undefined}
+              className={onSelectHole ? 'cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px]' : undefined}
+            >
+              <th scope="row" className={`${cell} font-semibold`} style={railCell}>
+                {i + 1}
               </th>
-              <td className={cell} style={{ borderColor: line, color: muted }}>{hole.par}</td>
-              <td className={cell} style={{ borderColor: line, color: muted }}>{hole.strokeIndex}</td>
+              <td className={cell} style={{ ...railCell, color: muted }}>{hole.par}</td>
+              <td className={cell} style={{ ...railEdge, color: muted }}>{hole.strokeIndex}</td>
               {players.map((p) => {
                 const stroke = p.scores?.[i];
                 const points = p.points?.[i];
@@ -94,10 +117,14 @@ export default function GolfScorecardTable({ holes = [], players = [], onSelectH
             {i === 8 && sectionRow('OUT', 0, 9)}
           </Fragment>)}
           {sectionRow('IN', 9, 18)}
-          {sectionRow('TOTAL', 0, 18)}
         </tbody>
       </table>
-      <p className="px-2 py-2 text-[10px] leading-snug" style={{ color: muted }}>
+      </div>
+      <table className="w-full shrink-0 table-fixed border-separate border-spacing-0 text-[10px] sm:text-xs" style={{ fontVariantNumeric: 'tabular-nums' }} aria-label="Round scorecard total">
+        {columns()}
+        <tbody>{sectionRow('TOTAL', 0, 18)}</tbody>
+      </table>
+      <p className="shrink-0 border-t px-2 py-2 text-[10px] leading-snug" style={{ color: muted }}>
         {statusLabel} · — Missing · P/U Pickup · * Partial gross total
       </p>
     </div>

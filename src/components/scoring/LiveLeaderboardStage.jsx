@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { useTournamentLiveScores } from '../../hooks/useTournamentLiveScores.js';
 import { calculateTournamentLeaderboard } from '../../lib/tournamentLeaderboard.js';
 
-function RankIcon({ position }) {
-  return <div className={`live-rank ${position === 1 ? 'live-rank-first' : ''}`} aria-label={`Position ${position}`}>{position === 1 ? '★' : String(position).padStart(2, '0')}</div>;
+function RankIcon({ position, tied }) {
+  return <div className={`live-rank ${position === 1 ? 'live-rank-first' : ''}`} aria-label={`Position ${position}`}>{position === 1 ? '★' : tied ? `T${position}` : String(position).padStart(2, '0')}</div>;
 }
 
 export default function LiveLeaderboardStage({ tournament }) {
@@ -15,6 +15,9 @@ export default function LiveLeaderboardStage({ tournament }) {
   }, [tournament, rounds, loading, error]);
   const activeRound = rounds.find(({ round }) => round.status === 'in_progress')?.round;
   const leader = rows[0];
+  const positionCounts = new Map();
+  for (const row of rows) positionCounts.set(row.position, (positionCounts.get(row.position) ?? 0) + 1);
+  const jointLeaders = (positionCounts.get(1) ?? 0) > 1;
   const provisional = rows.some(row => row.hasProvisional);
   return <section aria-label="Live tournament leaderboard" className="live-stage baggy-surface">
     <div className="live-stage-top">
@@ -25,14 +28,14 @@ export default function LiveLeaderboardStage({ tournament }) {
     {(error || calculationError) && <p className="p-5 text-sm text-red-600" role="alert">{error || calculationError}</p>}
     {!loading && !error && !calculationError && <div className="live-stage-list">
       {rows.length === 0 && <p className="baggy-muted p-5 text-sm">Standings will appear once the competition begins.</p>}
-      {rows.map((row, index) => <div key={row.playerId} className={`live-competitor ${index === 0 ? 'live-competitor-leader' : ''}`}>
-        <div className="live-competitor-identity"><RankIcon position={row.position}/>
+      {rows.map((row) => <div key={row.playerId} className={`live-competitor ${row.position === 1 ? 'live-competitor-leader' : ''}`}>
+        <div className="live-competitor-identity"><RankIcon position={row.position} tied={(positionCounts.get(row.position) ?? 0) > 1}/>
           <div className="min-w-0"><div className="live-competitor-name">{row.displayName}</div>
             <div className="live-competitor-meta">{row.holesScored} holes scored{row.hasProvisional ? ' · Provisional' : ''}{row.disputedHoles ? ` · ${row.disputedHoles} to review` : ''}</div>
           </div>
         </div>
         <div className="live-competitor-score"><div className="live-competitor-points tabular-nums">{row.points}</div><div className="live-competitor-points-label">POINTS</div>
-          {index === 0 ? <div className="live-competitor-gap">LEADER</div> : <div className="live-competitor-gap tabular-nums">{leader && leader.points > row.points ? `−${leader.points - row.points} pts` : 'TIED'}</div>}
+          {row.position === 1 ? <div className="live-competitor-gap">{jointLeaders ? 'JOINT LEADER' : 'LEADER'}</div> : <div className="live-competitor-gap tabular-nums">{leader && leader.points > row.points ? `−${leader.points - row.points} pts` : 'TIED'}</div>}
         </div>
       </div>)}
     </div>}

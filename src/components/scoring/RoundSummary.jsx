@@ -19,8 +19,7 @@ export default function RoundSummary({ tournament, round, participants, cards, o
     return { id, name: player.displayName || player.username || 'Player', playingHandicap, scores, points };
   }), [participants, cards, holes, round, tournament.handicapMode]);
 
-  return <div className="space-y-2">
-    <p className="text-xs" style={{ color: 'var(--muted, #667469)' }}>Tap a hole number to edit scores.</p>
-    <GolfScorecardTable holes={holes} players={players} onSelectHole={onSelectHole} statusLabel="Provisional scores" />
+  return <div className="flex h-full min-h-0 flex-col">
+    <div className="min-h-0 flex-1"><GolfScorecardTable holes={holes} players={players} onSelectHole={onSelectHole} statusLabel="Provisional scores" /></div>
   </div>;
 }
