@@ -6,9 +6,21 @@ export function calculateCareerStats(playerId, completedTournaments, roundRecord
   const tournaments = completedTournaments.filter((t) => t.status === 'completed' && t.participants?.[playerId]);
   const wins = tournaments.filter((t) => (t.winnerIds ?? []).includes(playerId)).length;
   const podiums = tournaments.filter((t) => (t.finalStandings ?? []).some((row) => row.playerId === playerId && row.position <= 3)).length;
-  const majors = tournaments.filter(t => t.tier === 'major');
-  const majorWins = majors.filter(t => (t.winnerIds ?? []).includes(playerId)).length;
-  const majorPodiums = majors.filter(t => (t.finalStandings ?? []).some(row => row.playerId === playerId && row.position <= 3)).length;
+  // Majors remain part of overall career totals. Keep their prestige record separate.
+  // A joint first is not an outright Major championship until a future playoff resolves it.
+  const majors = tournaments.filter((t) => t.tier === 'major');
+  const majorResults = majors.map((t) => {
+    const standing = (t.finalStandings ?? []).find((row) => row.playerId === playerId);
+    const position = Number.isInteger(standing?.position) ? standing.position : null;
+    const firstPlaceCount = (t.finalStandings ?? []).filter((row) => row.position === 1).length;
+    const jointFirst = position === 1 && ((t.winnerIds ?? []).length > 1 || firstPlaceCount > 1);
+    const champion = position === 1 && !jointFirst && (t.winnerIds ?? []).length === 1 && t.winnerIds[0] === playerId;
+    return { id: t.id, name: t.name, date: t.endDate ?? '', themeId: t.themeId ?? t.theme?.id ?? null,
+      position, jointFirst, champion };
+  }).sort((a,b) => String(b.date).localeCompare(String(a.date)) || String(a.name).localeCompare(String(b.name)));
+  const majorWins = majorResults.filter((result) => result.champion).length;
+  const majorPodiums = majorResults.filter((result) => result.position !== null && result.position <= 3).length;
+  const majorsPlayed = majorResults.length;
   const honours = tournaments.flatMap((t) => {
     const row = (t.finalStandings ?? []).find((r) => r.playerId === playerId);
     if (!row || ![1, 2, 3].includes(row.position)) return [];
@@ -34,5 +46,5 @@ export function calculateCareerStats(playerId, completedTournaments, roundRecord
   }
   const fortyPlusRounds = rounds.filter(r => r.points >= 40).length;
   const averagePoints = rounds.length ? rounds.reduce((sum, r) => sum + r.points, 0) / rounds.length : null;
-  return { playerId, honours, fortyPlusRounds, averagePoints, wins, podiums, majorWins, majorPodiums, roundsPlayed: rounds.length, tournamentsPlayed: tournaments.length, bestRound, eagleCount, birdieCount, awards, rounds, tournaments };
+  return { playerId, honours, fortyPlusRounds, averagePoints, wins, podiums, majorWins, majorPodiums, majorsPlayed, majorResults, roundsPlayed: rounds.length, tournamentsPlayed: tournaments.length, bestRound, eagleCount, birdieCount, awards, rounds, tournaments };
 }

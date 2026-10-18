@@ -24,12 +24,27 @@ function Overview({ stats, onProfile }) {
     </section>
   </div>;
 }
+function MajorHonours({ stats, onOpenTournament }) {
+  const results = stats.majorResults ?? [];
+  return <section aria-labelledby="major-honours-heading" className="baggy-surface rounded-2xl p-4 sm:p-5">
+    <div className="mb-3 flex items-center gap-2"><span aria-hidden="true" className="text-xl">🏆</span><h2 id="major-honours-heading" className="text-lg font-bold">Major championships</h2></div>
+    <div className="mb-4 grid grid-cols-3 gap-2"><Stat value={stats.majorWins ?? 0} label="Titles"/><Stat value={stats.majorPodiums ?? 0} label="Podiums"/><Stat value={stats.majorsPlayed ?? results.length} label="Played"/></div>
+    {!results.length ? <p className="baggy-muted text-sm">No completed Major appearances yet.</p> : <div className="divide-y" style={{borderColor:'var(--line)'}}>{results.map(result => {
+      const placing = result.champion ? 'Champion' : result.jointFirst ? 'Joint first · unresolved' : result.position === 2 ? 'Runner-up' : result.position === 3 ? 'Third place' : result.position ? `Position ${result.position}` : 'Result pending';
+      return <div key={result.id} className="flex items-center gap-3 py-3">
+        <div className="min-w-0 flex-1"><p className="font-semibold">{result.name}</p><p className="baggy-muted mt-1 text-xs">{result.date || 'Completed Major'} · {placing}</p></div>
+        {onOpenTournament && <button type="button" onClick={() => onOpenTournament(result.id)} className="baggy-gold min-h-11 shrink-0 text-xs font-semibold" aria-label={`View results for ${result.name}`}>Results →</button>}
+      </div>;
+    })}</div>}
+  </section>;
+}
 function Details({ stats, onOpenTournament }) {
   const [tab, setTab] = useState('honours');
   const tabs = [{ id: 'honours', label: 'Honours' }, { id: 'stats', label: 'Career stats' }, { id: 'history', label: 'History' }];
   const events = [...stats.tournaments].sort((a,b) => String(b.endDate || '').localeCompare(String(a.endDate || '')));
   return <div className="space-y-4">
     <section aria-label="Career statistics" className="grid grid-cols-3 gap-2"><Stat value={stats.wins} label="Wins"/><Stat value={stats.podiums} label="Podiums"/><Stat value={stats.roundsPlayed} label="Rounds"/></section>
+    <MajorHonours stats={stats} onOpenTournament={onOpenTournament}/>
     <div role="tablist" aria-label="Your golfing record" className="baggy-surface grid grid-cols-3 gap-1 rounded-xl p-1">{tabs.map(t => <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} className={`min-h-11 rounded-lg px-1 text-xs font-semibold sm:text-sm ${tab === t.id ? 'baggy-hero text-white' : 'baggy-muted'}`}>{t.label}</button>)}</div>
     {tab === 'honours' && <section role="tabpanel" aria-label="Honours" className="baggy-surface rounded-2xl p-4 sm:p-5"><h2 className="mb-3 text-lg font-bold">Tournament honours</h2>{!stats.honours.length ? <p className="baggy-muted text-sm">No tournament honours yet.</p> : <div className="divide-y" style={{borderColor:'var(--line)'}}>{stats.honours.map(award => <div key={award.id} className="flex items-center gap-3 py-3"><span aria-hidden="true" className="text-2xl">{ICONS[award.title] || '🏅'}</span><div className="min-w-0 flex-1"><p className="font-semibold">{award.title}</p><p className="baggy-muted text-xs">{award.event}{award.date ? ` · ${award.date}` : ''}</p></div>{onOpenTournament && <button type="button" onClick={() => onOpenTournament(award.tournamentId)} className="baggy-gold min-h-11 shrink-0 text-xs font-semibold">View →</button>}</div>)}</div>}</section>}
     {tab === 'stats' && <section role="tabpanel" aria-label="Career statistics" className="baggy-surface rounded-2xl p-4 sm:p-5"><h2 className="mb-3 text-lg font-bold">On-course records</h2><dl className="grid grid-cols-2 gap-3">{[{label:'Major championships',value:stats.majorWins ?? 0},{label:'Major podiums',value:stats.majorPodiums ?? 0},{label:'Best Stableford round',value:stats.bestRound == null ? '—' : `${stats.bestRound} pts`},{label:'Eagles',value:stats.eagleCount},{label:'Birdies',value:stats.birdieCount},{label:'40+ point rounds',value:stats.fortyPlusRounds},{label:'Average points',value:stats.averagePoints == null ? '—' : stats.averagePoints.toFixed(1)},{label:'Rounds played',value:stats.roundsPlayed}].map(s => <div key={s.label} className="rounded-xl border p-3" style={{borderColor:'var(--line)'}}><dd className="text-xl font-bold tabular-nums">{s.value}</dd><dt className="baggy-muted mt-1 text-xs">{s.label}</dt></div>)}</dl><p className="baggy-muted mt-4 text-xs">Calculated only from verified rounds in completed tournaments.</p></section>}
