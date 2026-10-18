@@ -12,8 +12,9 @@ import {
 import { auth, db } from '../config/firebase.js';
 import { validateRound } from '../lib/roundValidation.js';
 import { validateScorecard } from '../lib/scorecardValidation.js';
+import { makeCourseSnapshot } from '../lib/courseSelection.js';
 
-export async function createRound(tournament, { name, date, courseName }) {
+export async function createRound(tournament, { name, date, courseName, librarySelection = null }) {
     const user = auth.currentUser;
 
     if (!user) {
@@ -25,6 +26,9 @@ export async function createRound(tournament, { name, date, courseName }) {
     }
 
     validateRound({ name, date }, tournament);
+    const snapshot = librarySelection
+        ? makeCourseSnapshot(librarySelection.club, librarySelection.course, librarySelection.tee)
+        : null;
 
     const roundsRef = collection(
         db,
@@ -62,7 +66,12 @@ export async function createRound(tournament, { name, date, courseName }) {
         transaction.set(roundRef, {
             name: name.trim(),
             date,
-            courseName: courseName?.trim() || null,
+            courseName: snapshot?.courseName || courseName?.trim() || null,
+            ...(snapshot ? {
+                courseSnapshot: snapshot,
+                scorecard: { holes: snapshot.holes, totalPar: snapshot.totalPar },
+                teeRatings: { courseRating: snapshot.courseRating, slopeRating: snapshot.slopeRating },
+            } : {}),
             status: 'draft',
             createdAt: serverTimestamp(),
         });

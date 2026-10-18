@@ -73,7 +73,7 @@ function TournamentCard({ tournament, onOpen, userId }) {
   );
 }
 
-export default function TournamentList({ onSelectTournament, onCreate }) {
+export default function TournamentList({ onSelectTournament, onCreate, onOpenCourseLibrary }) {
   const { user } = useAuth();
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -128,6 +128,10 @@ export default function TournamentList({ onSelectTournament, onCreate }) {
         style={{background: 'var(--primary, #173d30)'}}>
         <span><span className="block">Create tournament</span><span className="mt-1 block text-xs font-normal opacity-80">Organise a competition with up to four players</span></span>
         <span aria-hidden="true" className="text-2xl">+</span>
+      </button>
+
+      <button type="button" onClick={onOpenCourseLibrary} className="flex min-h-12 w-full items-center justify-between rounded-xl border px-5 py-3 text-left font-semibold" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
+        <span>Clubs & courses <span className="baggy-muted ml-2 text-xs font-normal">Manage the shared course library</span></span><span aria-hidden="true">→</span>
       </button>
 
       {loading && <p className="baggy-muted text-sm">Loading tournaments...</p>}

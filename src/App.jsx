@@ -7,6 +7,7 @@ import AccountPage from './pages/AccountPage.jsx';
 import PlayerProfilePage from './pages/PlayerProfilePage.jsx';
 import CreateTournament from './components/tournaments/CreateTournament.jsx';
 import TournamentList from './components/tournaments/TournamentList.jsx';
+import CourseLibraryPage from './pages/CourseLibraryPage.jsx';
 import TournamentOverview from './components/tournaments/TournamentOverview.jsx';
 import ActiveScorecardPage from './pages/ActiveScorecardPage.jsx';
 import ActiveTournamentLayout from './components/layout/ActiveTournamentLayout.jsx';
@@ -88,12 +89,15 @@ export default function App() {
       {activePage === 'tournaments' && (
         <TournamentList
           onCreate={() => navigate('createTournament')}
+          onOpenCourseLibrary={() => navigate('courseLibrary')}
           onSelectTournament={(id) => {
             setSelectedTournamentId(id);
             setActivePage('tournamentOverview');
           }}
         />
       )}
+
+      {activePage === 'courseLibrary' && <CourseLibraryPage onBack={() => navigate('tournaments')} />}
 
       {activePage === 'createTournament' && (
         <CreateTournament

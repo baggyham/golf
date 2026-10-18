@@ -47,6 +47,40 @@ service cloud.firestore {
         && tee.slopeRating <= 155;
     }
 
+    // Shared manual course library. Available to registered BaggyGolf users.
+    // Store club/course/tee details together to make edits transactional.
+    match /courseClubs/{clubId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && exists(/databases/$(database)/documents/players/$(request.auth.uid))
+        && request.resource.data.keys().hasAll(['name', 'location', 'courses', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['name', 'location', 'courses', 'createdAt', 'updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.location is string
+        && request.resource.data.location.size() <= 150
+        && request.resource.data.courses is list
+        && request.resource.data.courses.size() == 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if signedIn()
+        && exists(/databases/$(database)/documents/players/$(request.auth.uid))
+        && request.resource.data.keys().hasOnly(['name', 'location', 'courses', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['name', 'location', 'courses', 'createdAt', 'updatedAt'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.location is string
+        && request.resource.data.location.size() <= 150
+        && request.resource.data.courses is list
+        && request.resource.data.courses.size() <= 40
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if signedIn()
+        && exists(/databases/$(database)/documents/players/$(request.auth.uid));
+    }
+
     // Accounts are created manually. The browser cannot create player profiles.
     match /players/{playerId} {
       allow get, list: if signedIn();
@@ -202,7 +236,8 @@ service cloud.firestore {
             'name', 'date', 'courseName', 'status', 'createdAt'
           ])
           && request.resource.data.keys().hasOnly([
-            'name', 'date', 'courseName', 'status', 'createdAt'
+            'name', 'date', 'courseName', 'status', 'createdAt',
+            'courseSnapshot', 'scorecard', 'teeRatings'
           ])
           && request.resource.data.name is string
           && request.resource.data.name.size() >= 1
@@ -218,6 +253,42 @@ service cloud.firestore {
               && request.resource.data.courseName.size() <= 120)
           )
           && request.resource.data.status == 'draft'
+          && (
+            !request.resource.data.keys().hasAny(['courseSnapshot', 'scorecard', 'teeRatings'])
+            || (
+              request.resource.data.keys().hasAll(['courseSnapshot', 'scorecard', 'teeRatings'])
+              && validRoundScorecard(request.resource.data.scorecard)
+              && validTeeRatings(request.resource.data.teeRatings)
+              && request.resource.data.courseSnapshot is map
+              && request.resource.data.courseSnapshot.keys().hasAll([
+                'source', 'clubName', 'courseName', 'teeName', 'teeColour',
+                'teeGender', 'yardage', 'holes', 'totalPar', 'courseRating', 'slopeRating'
+              ])
+              && request.resource.data.courseSnapshot.keys().hasOnly([
+                'source', 'clubName', 'courseName', 'teeName', 'teeColour',
+                'teeGender', 'yardage', 'holes', 'totalPar', 'courseRating', 'slopeRating'
+              ])
+              && request.resource.data.courseSnapshot.source is map
+              && request.resource.data.courseSnapshot.source.keys().hasAll(['clubId', 'courseId', 'teeId'])
+              && request.resource.data.courseSnapshot.source.keys().hasOnly(['clubId', 'courseId', 'teeId'])
+              && request.resource.data.courseSnapshot.source.clubId is string
+              && request.resource.data.courseSnapshot.source.courseId is string
+              && request.resource.data.courseSnapshot.source.teeId is string
+              && request.resource.data.courseSnapshot.clubName is string
+              && request.resource.data.courseSnapshot.clubName.size() <= 100
+              && request.resource.data.courseSnapshot.courseName == request.resource.data.courseName
+              && request.resource.data.courseSnapshot.teeName is string
+              && request.resource.data.courseSnapshot.teeColour is string
+              && request.resource.data.courseSnapshot.teeGender in ['men', 'women']
+              && request.resource.data.courseSnapshot.yardage is int
+              && request.resource.data.courseSnapshot.yardage >= 1000
+              && request.resource.data.courseSnapshot.yardage <= 10000
+              && request.resource.data.courseSnapshot.holes == request.resource.data.scorecard.holes
+              && request.resource.data.courseSnapshot.totalPar == request.resource.data.scorecard.totalPar
+              && request.resource.data.courseSnapshot.courseRating == request.resource.data.teeRatings.courseRating
+              && request.resource.data.courseSnapshot.slopeRating == request.resource.data.teeRatings.slopeRating
+            )
+          )
           && request.resource.data.createdAt == request.time;
 
         function verifiedPath(playerId) {
