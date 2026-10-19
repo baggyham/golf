@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { listClubs } from '../../../repositories/courseLibraryRepository.js';
 import { createRound } from '../../../repositories/roundRepository.js';
 
-const fieldClass = 'w-full min-w-0 rounded-lg border border-baggygolf-line bg-baggygolf-surface p-3';
+const fieldClass = 'mt-1 block min-h-10 w-full min-w-0 rounded-lg border px-3 py-2 text-sm outline-offset-2';
+const fieldStyle = { background: 'var(--surface)', color: 'var(--ink)', borderColor: 'var(--line)' };
 
-export default function AddRound({ tournament, onCreated }) {
-  const [name, setName] = useState('');
-  const [date, setDate] = useState('');
+export default function AddRound({ tournament, onCreated, roundNumber = 1 }) {
+  const [step, setStep] = useState(0);
+  const [name, setName] = useState(`Round ${roundNumber}`);
+  const [date, setDate] = useState(tournament.startDate || '');
   const [mode, setMode] = useState('library');
   const [courseName, setCourseName] = useState('');
   const [clubs, setClubs] = useState([]);
@@ -16,11 +18,13 @@ export default function AddRound({ tournament, onCreated }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [libraryError, setLibraryError] = useState(false);
 
   useEffect(() => {
     let mounted = true;
-    listClubs().then(items => { if (mounted) setClubs(items); })
-      .catch(() => { if (mounted) setError('Unable to load the course library. You can use manual setup instead.'); })
+    listClubs()
+      .then(items => { if (mounted) setClubs(items); })
+      .catch(() => { if (mounted) setLibraryError(true); })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
@@ -29,87 +33,147 @@ export default function AddRound({ tournament, onCreated }) {
   const course = club?.courses?.find(item => item.id === courseId);
   const tee = course?.teeSets?.find(item => item.id === teeId);
   const librarySelection = mode === 'library' && club && course && tee ? { club, course, tee } : null;
+  const par = course?.holes?.reduce((sum, hole) => sum + Number(hole.par || 0), 0);
+
+  function nextStep() {
+    if (!name.trim() || name.trim().length > 80 || !date ||
+      (tournament.startDate && date < tournament.startDate) ||
+      (tournament.endDate && date > tournament.endDate)) {
+      setError('Enter a round name and a date within the tournament dates.');
+      return;
+    }
+    setError('');
+    setStep(1);
+  }
 
   async function handleSubmit(event) {
     event.preventDefault();
     if (saving) return;
+    if (step === 0) { nextStep(); return; }
     if (mode === 'library' && !librarySelection) {
-      setError('Choose a club, course and tee set, or switch to manual setup.');
+      setError('Choose a club, course and tee colour, or select Manual.');
       return;
     }
     setSaving(true);
     setError('');
     try {
-      await createRound(tournament, {
-        name, date,
-        courseName: mode === 'manual' ? courseName : undefined,
+      const roundId = await createRound(tournament, {
+        name: name.trim(),
+        date,
+        courseName: mode === 'manual' ? courseName.trim() : undefined,
         librarySelection,
       });
-      setName(''); setDate(''); setCourseName('');
-      await onCreated?.();
+      await onCreated?.({ roundId, usedLibrary: Boolean(librarySelection) });
     } catch (err) {
-      setError(err?.message || 'Could not create the round.');
+      setError(err?.message || 'Could not add the round.');
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-baggygolf-line bg-baggygolf-surface p-5">
-      <h3 className="text-lg font-semibold text-baggygolf-950">Add round</h3>
-      <div>
-        <label htmlFor="round-name" className="mb-1 block text-sm font-medium">Round name</label>
-        <input id="round-name" required maxLength={80} value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Round 1" className={fieldClass} />
-      </div>
-      <div>
-        <label htmlFor="round-date" className="mb-1 block text-sm font-medium">Date</label>
-        <input id="round-date" type="date" required min={tournament.startDate} max={tournament.endDate} value={date} onChange={e => setDate(e.target.value)} className={fieldClass} />
-      </div>
-      <fieldset className="space-y-3">
-        <legend className="mb-2 text-sm font-semibold">Course setup</legend>
-        <div className="flex flex-wrap gap-4 text-sm">
-          <label className="flex items-center gap-2"><input type="radio" name="course-mode" checked={mode === 'library'} onChange={() => setMode('library')} /> Course library</label>
-          <label className="flex items-center gap-2"><input type="radio" name="course-mode" checked={mode === 'manual'} onChange={() => setMode('manual')} /> Manual setup</label>
+    <form onSubmit={handleSubmit}
+      className="baggy-surface flex w-full min-w-0 max-h-[calc(100dvh-120px)] flex-col overflow-hidden rounded-2xl border"
+      style={{ borderColor: 'var(--line)' }}>
+      <header className="shrink-0 border-b px-4 py-3" style={{ borderColor: 'var(--line)' }}>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-bold">{step === 0 ? 'Round details' : 'Course & tees'}</h2>
+          <span className="baggy-muted text-xs tabular-nums">{step + 1} / 2</span>
         </div>
-        {mode === 'library' ? (
+        <div className="mt-2 flex gap-1.5" aria-label={`Step ${step + 1} of 2`}>
+          {[0, 1].map(index => (
+            <span key={index} className="h-1 flex-1 rounded-full"
+              style={{ background: index <= step ? 'var(--primary)' : 'var(--line)' }} />
+          ))}
+        </div>
+      </header>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+        {step === 0 ? (
           <div className="space-y-3">
-            <div><label htmlFor="library-club" className="mb-1 block text-sm font-medium">Club</label>
-              <select id="library-club" className={fieldClass} value={clubId} disabled={loading} onChange={e => { setClubId(e.target.value); setCourseId(''); setTeeId(''); }}>
-                <option value="">{loading ? 'Loading clubs…' : 'Select club'}</option>
-                {clubs.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </select>
-            </div>
-            <div><label htmlFor="library-course" className="mb-1 block text-sm font-medium">Course</label>
-              <select id="library-course" className={fieldClass} value={courseId} disabled={!club} onChange={e => { setCourseId(e.target.value); setTeeId(''); }}>
-                <option value="">Select course</option>
-                {(club?.courses || []).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-              </select>
-            </div>
-            <div><label htmlFor="library-tee" className="mb-1 block text-sm font-medium">Tee set</label>
-              <select id="library-tee" className={fieldClass} value={teeId} disabled={!course} onChange={e => setTeeId(e.target.value)}>
-                <option value="">Select tee set</option>
-                {(course?.teeSets || []).map(item => <option key={item.id} value={item.id}>{item.name} · CR {item.courseRating} · Slope {item.slopeRating}</option>)}
-              </select>
-            </div>
-            {librarySelection && <p className="rounded-lg p-3 text-sm" style={{ background: 'var(--surface-soft)' }}>
-              <strong>{club.name} · {course.name} · {tee.name}</strong><br />
-              {course.holes?.length || 0} holes · Par {course.holes?.reduce((sum, h) => sum + Number(h.par), 0)} · CR {tee.courseRating} · Slope {tee.slopeRating}
-              <span className="mt-1 block text-xs opacity-75">A snapshot of this course and tee set will be saved with the round.</span>
-            </p>}
-            {!loading && clubs.length === 0 && <p className="text-sm opacity-75">No clubs yet. Add a course in the library, or use manual setup.</p>}
+            <label className="block text-sm font-semibold" htmlFor="round-name">Name
+              <input id="round-name" required maxLength={80} value={name}
+                onChange={e => setName(e.target.value)} className={fieldClass} style={fieldStyle} />
+            </label>
+            <label className="block text-sm font-semibold" htmlFor="round-date">Date
+              <input id="round-date" type="date" required
+                min={tournament.startDate || undefined} max={tournament.endDate || undefined}
+                value={date} onChange={e => setDate(e.target.value)}
+                className={fieldClass} style={fieldStyle} />
+            </label>
           </div>
         ) : (
-          <div>
-            <label htmlFor="course-name" className="mb-1 block text-sm font-medium">Course name (optional)</label>
-            <input id="course-name" maxLength={120} value={courseName} onChange={e => setCourseName(e.target.value)} placeholder="Course name" className={fieldClass} />
-            <p className="mt-1 text-xs text-baggygolf-muted">You'll enter the 18 holes and tee ratings after adding the round.</p>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="Course setup method">
+              {[['library', 'Library'], ['manual', 'Manual']].map(([value, label]) => (
+                <button key={value} type="button" aria-pressed={mode === value}
+                  onClick={() => { setMode(value); setError(''); }}
+                  className="min-h-10 rounded-lg border px-2 py-2 text-sm font-semibold"
+                  style={{ borderColor: mode === value ? 'var(--primary)' : 'var(--line)',
+                    background: mode === value ? 'var(--surface-soft)' : 'var(--surface)' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {mode === 'library' ? (
+              <div className="space-y-2.5">
+                <label className="block text-sm font-semibold" htmlFor="library-club">Club
+                  <select id="library-club" className={fieldClass} style={fieldStyle} value={clubId}
+                    disabled={loading} onChange={e => { setClubId(e.target.value); setCourseId(''); setTeeId(''); }}>
+                    <option value="">{loading ? 'Loading…' : 'Select club'}</option>
+                    {clubs.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>
+                </label>
+                <label className="block text-sm font-semibold" htmlFor="library-course">Course
+                  <select id="library-course" className={fieldClass} style={fieldStyle} value={courseId}
+                    disabled={!club} onChange={e => { setCourseId(e.target.value); setTeeId(''); }}>
+                    <option value="">Select course</option>
+                    {(club?.courses || []).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+                  </select>
+                </label>
+                <label className="block text-sm font-semibold" htmlFor="library-tee">Tees
+                  <select id="library-tee" className={fieldClass} style={fieldStyle} value={teeId}
+                    disabled={!course} onChange={e => setTeeId(e.target.value)}>
+                    <option value="">Select colour</option>
+                    {(course?.teeSets || []).map(item => <option key={item.id} value={item.id}>{item.color || item.name}</option>)}
+                  </select>
+                </label>
+                {librarySelection && (
+                  <p className="baggy-muted text-xs" aria-live="polite">
+                    Par {par} · CR {tee.courseRating} · Slope {tee.slopeRating}
+                  </p>
+                )}
+                {!loading && (clubs.length === 0 || libraryError) && (
+                  <p className="baggy-muted text-xs">{libraryError ? 'Library unavailable.' : 'No clubs saved yet.'} Use Manual to continue.</p>
+                )}
+              </div>
+            ) : (
+              <label className="block text-sm font-semibold" htmlFor="course-name">
+                Course name <span className="baggy-muted font-normal">(optional)</span>
+                <input id="course-name" maxLength={120} value={courseName}
+                  onChange={e => setCourseName(e.target.value)} placeholder="Enter course name"
+                  className={fieldClass} style={fieldStyle} />
+              </label>
+            )}
           </div>
         )}
-      </fieldset>
-      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-      <button type="submit" disabled={saving || loading && mode === 'library'} className="rounded-lg bg-baggygolf-primary px-5 py-3 font-semibold text-white disabled:opacity-50">
-        {saving ? 'Adding round…' : 'Add round'}
-      </button>
+        {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
+      </div>
+
+      <footer className="flex shrink-0 items-center gap-2 border-t px-4 py-2.5"
+        style={{ borderColor: 'var(--line)' }}>
+        {step === 1 && (
+          <button type="button" disabled={saving}
+            onClick={() => { setStep(0); setError(''); }}
+            className="min-h-11 rounded-lg border px-4 text-sm font-semibold"
+            style={{ borderColor: 'var(--line)' }}>Back</button>
+        )}
+        <button type="submit" disabled={saving || (step === 1 && mode === 'library' && loading)}
+          className="min-h-11 flex-1 rounded-lg px-4 text-sm font-bold disabled:opacity-50"
+          style={{ background: 'var(--primary)', color: 'var(--on-primary, white)' }}>
+          {saving ? 'Adding…' : step === 0 ? 'Continue' : 'Add round'}
+        </button>
+      </footer>
     </form>
   );
 }

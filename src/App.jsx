@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useTheme } from './contexts/ThemeContext.jsx';
-import { tournamentTier, majorThemeById } from './lib/majorThemes.js';
+import { majorThemeIdForView } from './lib/themeRouting.js';
 import AppShell from './components/layout/AppShell.jsx';
 import HomePage from './pages/HomePage.jsx';
 import AccountPage from './pages/AccountPage.jsx';
@@ -22,15 +22,22 @@ export default function App() {
   const [returnPage, setReturnPage] = useState('home');
   const [selectedTournamentId, setSelectedTournamentId] = useState(null);
   const [activeTournament, setActiveTournament] = useState(null);
+  const [overviewTournament, setOverviewTournament] = useState(null);
   const [draftManagementOpen, setDraftManagementOpen] = useState(false);
   const onActiveTournamentChange = useCallback((t) => setActiveTournament(t), []);
+  const onOverviewTournamentChange = useCallback((t) => setOverviewTournament(t), []);
   useEffect(() => {
-    const major = activeTournament && tournamentTier(activeTournament) === 'major'
-      ? majorThemeById(activeTournament.majorThemeId)
-      : null;
-    setActiveMajorId(major?.id ?? null);
+    // The selected draft/managed tournament owns the palette while its setup is open.
+    // On other screens, use the active competition (or the standard BaggyGolf theme).
+    const majorId = majorThemeIdForView({
+      activePage,
+      activeTournament,
+      selectedTournamentId,
+      overviewTournament,
+    });
+    setActiveMajorId(majorId);
     return () => setActiveMajorId(null);
-  }, [activeTournament, setActiveMajorId]);
+  }, [activePage, activeTournament, selectedTournamentId, overviewTournament, setActiveMajorId]);
 
   function openPlayerProfile(id) {
     if (!id) return;
@@ -113,6 +120,7 @@ export default function App() {
       {activePage === 'tournamentOverview' && selectedTournamentId && (
         <TournamentOverview
           tournamentId={selectedTournamentId}
+          onTournamentChange={onOverviewTournamentChange}
           onDraftManagementChange={setDraftManagementOpen}
           onOpenPlayer={openPlayerProfile}
           onBack={() => navigate(activeTournament?.id === selectedTournamentId ? 'home' : 'tournaments')}

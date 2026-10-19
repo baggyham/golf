@@ -12,6 +12,7 @@ export default function RoundHandicaps({
                                            tournament,
                                            round,
                                            onSaved,
+                                           showPlayerBreakdown = true,
                                        }) {
     const { user } = useAuth();
 
@@ -55,7 +56,7 @@ export default function RoundHandicaps({
 
     return (
         <section className="space-y-4 rounded-lg bg-baggygolf-bg p-4">
-            <h4 className="font-semibold">Round handicaps</h4>
+            <h4 className="font-semibold">{showPlayerBreakdown ? 'Round handicaps' : 'Tee ratings'}</h4>
 
             {isCourseMode && isOrganiser && round.status === 'draft' && (
                 <form onSubmit={handleSave} className="space-y-3">
@@ -113,7 +114,7 @@ export default function RoundHandicaps({
                 </p>
             )}
 
-            {round.scorecard && participants.length > 0 && (
+            {showPlayerBreakdown && round.scorecard && participants.length > 0 && (
                 <div className="space-y-2">
                     {participants.map(([playerId, participant]) => {
                         let playingHandicap = null;
@@ -156,7 +157,7 @@ export default function RoundHandicaps({
                 </div>
             )}
 
-            {!round.scorecard && (
+            {showPlayerBreakdown && !round.scorecard && (
                 <p className="text-sm text-baggygolf-muted">
                     Configure the round scorecard to see handicaps.
                 </p>

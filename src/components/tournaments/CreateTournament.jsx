@@ -6,8 +6,8 @@ import { createTournament } from '../../repositories/tournamentRepository.js';
 const BASE_STEPS = ['Details', 'Players', 'Review'];
 const surname = (name = '') => name.trim().split(/\s+/).at(-1) || '';
 const bySurname = (a, b) => surname(a.displayName).localeCompare(surname(b.displayName), 'en', { sensitivity: 'base' }) || a.displayName.localeCompare(b.displayName, 'en', { sensitivity: 'base' });
-const inputClass = 'mt-2 min-h-11 w-full rounded-xl border px-3 py-2.5 outline-offset-2';
-const panelClass = 'min-h-0 flex-1 overflow-y-auto p-4 sm:p-6';
+const inputClass = 'mt-2 min-h-11 min-w-0 w-full rounded-xl border px-3 py-2.5 outline-offset-2';
+const panelClass = 'min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6';
 
 function formatDate(date) {
   if (!date) return 'Not set';
@@ -126,13 +126,13 @@ export default function CreateTournament({ onCreated, onCancel }) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5 pb-6">
-      <header className="space-y-2">
-        <p className="baggy-gold text-xs font-bold uppercase tracking-[0.18em]">Tournament setup</p>
-        <h1 className="text-3xl font-bold">Create a tournament</h1>
+    <div className="mx-auto flex h-[calc(100dvh-3.5rem)] min-h-0 w-full max-w-2xl flex-col gap-3 overflow-hidden sm:h-[calc(100dvh-4rem)]">
+      <header className="shrink-0">
+        <p className="baggy-gold text-[10px] font-bold uppercase tracking-[0.18em]">THE CLUBHOUSE · NEW COMPETITION</p>
+        <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Create tournament</h1>
       </header>
 
-      <ol aria-label="Tournament creation steps" className="grid gap-2" style={{ gridTemplateColumns: `repeat(${STEPS.length}, minmax(0, 1fr))` }}>
+      <ol aria-label="Tournament creation steps" className="grid shrink-0 gap-2" style={{ gridTemplateColumns: `repeat(${STEPS.length}, minmax(0, 1fr))` }}>
         {STEPS.map((label, index) => (
           <li key={label} className="min-w-0">
             <div className="h-1.5 rounded-full" style={{ background: index <= step ? 'var(--primary, #173d30)' : 'var(--line, #d9e0d6)' }} />
@@ -143,14 +143,14 @@ export default function CreateTournament({ onCreated, onCancel }) {
         ))}
       </ol>
 
-      <div className="baggy-surface flex h-[min(630px,calc(100dvh-240px))] min-h-[340px] flex-col overflow-hidden rounded-2xl">
-      {step === 0 && <section className={`${panelClass} space-y-5`} aria-labelledby="details-heading">
-        <div><h2 id="details-heading" className="text-xl font-bold">Tournament details</h2><p className="baggy-muted mt-1 text-sm">Give your competition a name and dates.</p></div>
+      <div className="baggy-surface flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl">
+      {step === 0 && <section className={`${panelClass} space-y-3`} aria-labelledby="details-heading">
+        <div><h2 id="details-heading" className="text-xl font-bold">Tournament details</h2><p className="baggy-muted mt-1 text-sm">Name, dates and format.</p></div>
         <label className="block text-sm font-semibold">Tournament name
           <input className={inputClass} style={{ background: 'var(--surface)', color: 'var(--ink)', borderColor: 'var(--line)' }} value={name} maxLength={100} onChange={event => setName(event.target.value)} placeholder="e.g. Sabo Open 2027" autoComplete="off" aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? "tournament-name-error" : undefined} />
           {fieldErrors.name && <span id="tournament-name-error" role="alert" className="mt-1 block text-xs text-red-600">{fieldErrors.name}</span>}
         </label>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-3">
           <label className="block text-sm font-semibold">Start date
             <input className={inputClass} style={{ background: 'var(--surface)', color: 'var(--ink)', borderColor: 'var(--line)' }} type="date" value={startDate} onChange={event => { setStartDate(event.target.value); if (endDate && event.target.value > endDate) setEndDate(''); }} aria-invalid={Boolean(fieldErrors.startDate)} />
             {fieldErrors.startDate && <span role="alert" className="mt-1 block text-xs text-red-600">{fieldErrors.startDate}</span>}
@@ -161,25 +161,24 @@ export default function CreateTournament({ onCreated, onCancel }) {
           </label>
         </div>
         <fieldset className="space-y-2"><legend className="mb-2 text-sm font-semibold">Competition type</legend>
-          <div className="grid grid-cols-2 gap-3">{[{ value: 'casual', label: 'Casual', description: 'Standard BaggyGolf look' }, { value: 'major', label: 'Major', description: 'Championship identity' }].map(option => (
+          <div className="grid grid-cols-2 gap-3">{[{ value: 'casual', label: 'Casual', description: 'Regular competition' }, { value: 'major', label: 'Major', description: 'Championship' }].map(option => (
             <button type="button" key={option.value} aria-pressed={tier === option.value} onClick={() => setTier(option.value)}
-              className="rounded-xl border p-3 text-left" style={{ borderColor: tier === option.value ? 'var(--primary)' : 'var(--line)', background: tier === option.value ? 'var(--surface-soft)' : 'var(--surface)' }}>
+              className="min-h-16 rounded-xl border p-3 text-left" style={{ borderColor: tier === option.value ? 'var(--primary)' : 'var(--line)', background: tier === option.value ? 'var(--surface-soft)' : 'var(--surface)' }}>
               <strong className="block text-sm">{option.label}</strong><span className="baggy-muted block text-xs">{option.description}</span>
             </button>
           ))}</div>
         </fieldset>
-        <fieldset className="space-y-2"><legend className="mb-2 text-sm font-semibold">Handicap calculation</legend>
-          {[{ value: 'fixed', title: 'Fixed Playing Handicap', body: 'The same Playing Handicap for every round.' }, { value: 'course', title: 'Course handicap', body: 'Calculated for each round using course and tee ratings.' }].map(option => (
-            <label key={option.value} className="flex cursor-pointer gap-3 rounded-xl border p-4" style={{ borderColor: handicapMode === option.value ? 'var(--primary)' : 'var(--line)', background: handicapMode === option.value ? 'var(--surface-soft)' : 'var(--surface)' }}>
-              <input type="radio" name="handicapMode" value={option.value} checked={handicapMode === option.value} onChange={() => setHandicapMode(option.value)} className="mt-1 accent-current" />
-              <span><strong className="block text-sm">{option.title}</strong><span className="baggy-muted mt-1 block text-xs">{option.body}</span></span>
-            </label>
-          ))}
-        </fieldset>
+        <label className="block text-sm font-semibold">Handicap method
+          <select aria-label="Handicap calculation" value={handicapMode} onChange={event => setHandicapMode(event.target.value)} className={inputClass}
+            style={{ background: 'var(--surface)', color: 'var(--ink)', borderColor: 'var(--line)' }}>
+            <option value="fixed">Fixed playing handicap</option>
+            <option value="course">Calculated from course and tees</option>
+          </select>
+        </label>
       </section>}
 
-      {step === 1 && <section className={`${panelClass} space-y-4`} aria-labelledby="players-heading">
-        <div><h2 id="players-heading" className="text-xl font-bold">Choose players <span className="baggy-muted text-base">({selectedCount}/4)</span></h2><p className="baggy-muted mt-1 text-sm">Select up to four players. Their current Handicap Index will be snapshotted when you create the tournament.</p></div>
+      {step === 1 && <section className={`${panelClass} space-y-3`} aria-labelledby="players-heading">
+        <div><h2 id="players-heading" className="text-xl font-bold">Choose players <span className="baggy-muted text-base">({selectedCount}/4)</span></h2><p className="baggy-muted mt-1 text-sm">Tap to select up to four golfers.</p></div>
         {fieldErrors.players && <p role="alert" className="text-xs text-red-600">{fieldErrors.players}</p>}
         {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
         {loading && <p className="baggy-muted">Loading players…</p>}
@@ -187,8 +186,8 @@ export default function CreateTournament({ onCreated, onCancel }) {
         <div className="space-y-2">{players.map(player => {
           const isSelected = Boolean(selected[player.id]);
           const isEditing = editingId === player.id;
-          return <div key={player.id} className="rounded-xl border px-3 py-3" style={{ borderColor: isSelected ? 'var(--primary)' : 'var(--line)', background: 'var(--surface)' }}>
-            <div className="flex min-h-11 items-center gap-2">
+          return <div key={player.id} className="rounded-xl border px-3 py-2" style={{ borderColor: isSelected ? 'var(--primary)' : 'var(--line)', background: 'var(--surface)' }}>
+            <div className="flex min-h-10 items-center gap-2">
               <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
                 <input type="checkbox" checked={isSelected} disabled={!isSelected && selectedCount >= 4} onChange={() => togglePlayer(player)} />
                 <span className="min-w-0 truncate text-sm font-semibold">{player.displayName}</span>
@@ -214,33 +213,37 @@ export default function CreateTournament({ onCreated, onCancel }) {
         })}</div>
       </section>}
 
-      {tier === 'major' && step === 2 && <section className={`${panelClass} space-y-4`} aria-labelledby="themes-heading">
+      {tier === 'major' && step === 2 && <section className={`${panelClass} space-y-3`} aria-labelledby="themes-heading">
         <div><h2 id="themes-heading" className="text-xl font-bold">Choose a Major theme</h2>
-          <p className="baggy-muted mt-1 text-sm">A distinct, predefined championship look. No editing needed.</p></div>
+          <p className="baggy-muted mt-1 text-sm">Choose your championship colours.</p></div>
         <div className="grid grid-cols-2 gap-3">{MAJOR_THEMES.map(theme => (
           <button type="button" key={theme.id} aria-pressed={majorThemeId === theme.id} onClick={() => setMajorThemeId(theme.id)}
             className="overflow-hidden rounded-xl border-2 text-left" style={{ borderColor: majorThemeId === theme.id ? 'var(--gold)' : 'var(--line)' }}>
-            <span className="block p-4" style={{ background: theme.primary, color: '#FFFFFF' }}>
+            <span className="block p-3" style={{ background: theme.primary, color: '#FFFFFF' }}>
               <span className="block text-[10px] font-bold tracking-widest" style={{ color: theme.accent }}>MAJOR CHAMPIONSHIP</span>
               <span className="mt-2 block font-bold">{name.trim() || 'Your Championship'}</span>
-              <span className="mt-3 block h-1 rounded-full" style={{ background: theme.accent }} />
+              <span className="mt-2 block h-1 rounded-full" style={{ background: theme.accent }} />
             </span>
-            <span className="block p-3 text-sm font-semibold" style={{ background: 'var(--surface)' }}>{theme.name} {majorThemeId === theme.id ? '✓' : ''}</span>
+            <span className="block p-2 text-xs font-semibold" style={{ background: 'var(--surface)' }}>{theme.name} {majorThemeId === theme.id ? '✓' : ''}</span>
           </button>
         ))}</div>
         {fieldErrors.theme && <p role="alert" className="text-sm text-red-600">{fieldErrors.theme}</p>}
       </section>}
 
-      {step === STEPS.length - 1 && <section className={`${panelClass} space-y-5`} aria-labelledby="review-heading">
+      {step === STEPS.length - 1 && <section className={`${panelClass} space-y-3`} aria-labelledby="review-heading">
         <div><h2 id="review-heading" className="text-xl font-bold">Review your tournament</h2></div>
         <div className="rounded-xl p-4" style={{ background: 'var(--surface-soft)' }}><p className="baggy-gold text-xs font-bold uppercase tracking-wider">Draft tournament</p><h3 className="mt-1 text-xl font-bold">{name.trim()}</h3><p className="baggy-muted mt-2 text-sm">{formatDate(startDate)} – {formatDate(endDate)}</p><p className="mt-2 text-xs font-semibold">{tier === 'major' ? `Major · ${MAJOR_THEMES.find(t => t.id === majorThemeId)?.name || 'Theme required'}` : 'Casual · Default BaggyGolf theme'}</p></div>
-        <dl className="grid grid-cols-2 gap-4 text-sm"><div><dt className="baggy-muted">Format</dt><dd className="mt-1 font-semibold">Individual Stableford</dd></div><div><dt className="baggy-muted">Handicaps</dt><dd className="mt-1 font-semibold">{handicapMode === 'fixed' ? 'Fixed' : 'By course'}</dd></div></dl>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-xl p-3" style={{ background: 'var(--surface-soft)' }}><p className="text-xl font-bold">{selectedCount}</p><p className="baggy-muted text-xs">Players</p></div>
+          <div className="rounded-xl p-3" style={{ background: 'var(--surface-soft)' }}><p className="text-sm font-bold">Stableford</p><p className="baggy-muted text-xs">Format</p></div>
+          <div className="rounded-xl p-3" style={{ background: 'var(--surface-soft)' }}><p className="text-sm font-bold">{handicapMode === 'fixed' ? 'Fixed' : 'Course'}</p><p className="baggy-muted text-xs">Handicap</p></div>
+        </div>
+        <p className="baggy-muted text-xs">Review the essentials, then add your rounds and courses in tournament management.</p>
         {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
-        <div><h3 className="mb-2 text-sm font-bold">Players ({selectedCount})</h3><ul className="divide-y" style={{ borderColor: 'var(--line)' }}>{selectedPlayers.map(player => <li className="flex justify-between gap-2 py-2 text-sm" key={player.id}><span className="font-medium">{player.displayName}</span><span className="baggy-muted">{handicapMode === 'fixed' ? `PH ${selected[player.id].fixedPlayingHandicap}` : `HI ${player.handicapIndex}`}</span></li>)}</ul></div>
       </section>}
 
       </div>
-      <div className="flex flex-wrap gap-3">
+      <div className="flex shrink-0 gap-3 pb-1">
         <button type="button" disabled={saving} onClick={() => { setError(''); if (step === 0) onCancel?.(); else setStep(current => current - 1); }} className="min-h-12 rounded-xl border px-5 py-2 font-semibold disabled:opacity-50" style={{ borderColor: 'var(--line)' }}>{step === 0 ? 'Cancel' : 'Back'}</button>
         {step < STEPS.length - 1 ? <button type="button" disabled={loading && step === 1} onClick={next} className="min-h-12 flex-1 rounded-xl px-5 py-2 font-semibold text-white" style={{ background: 'var(--primary, #173d30)' }}>Continue →</button>
           : <button type="button" disabled={saving} onClick={handleCreate} className="min-h-12 flex-1 rounded-xl px-5 py-2 font-semibold text-white disabled:opacity-50" style={{ background: 'var(--primary, #173d30)' }}>{saving ? 'Creating…' : 'Create draft tournament'}</button>}
