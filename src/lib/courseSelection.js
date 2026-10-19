@@ -11,7 +11,6 @@ export function makeCourseSnapshot(club, course, tee) {
     courseName: String(course.name).trim(),
     teeName: rating.name,
     teeColour: rating.colour,
-    teeGender: rating.gender,
     yardage: rating.yardage,
     holes,
     totalPar: holes.reduce((sum, hole) => sum + hole.par, 0),

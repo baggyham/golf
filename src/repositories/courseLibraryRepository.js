@@ -1,6 +1,7 @@
 import { collection, doc, getDocs, runTransaction, serverTimestamp, deleteDoc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase.js';
 import { validateClub, validateCourse, validateTee } from '../lib/courseLibrary.js';
+import { originOnCreate, originOnEdit } from '../lib/courseOrigin.js';
 
 const ref = (id) => doc(db, 'courseClubs', id);
 const newId = () => doc(collection(db, 'courseClubs')).id;
@@ -13,10 +14,10 @@ export async function saveClub(id, fields) {
   const value = validateClub(fields);
   if (!id) {
     const clubId = newId();
-    await setDoc(ref(clubId), { ...value, courses: [], createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    await setDoc(ref(clubId), { ...value, origin: originOnCreate(), courses: [], createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
     return clubId;
   }
-  await runTransaction(db, async tx => { const snap = await tx.get(ref(id)); if (!snap.exists()) throw new Error('Club no longer exists.'); tx.update(ref(id), { ...value, updatedAt: serverTimestamp() }); });
+  await runTransaction(db, async tx => { const snap = await tx.get(ref(id)); if (!snap.exists()) throw new Error('Club no longer exists.'); tx.update(ref(id), { ...value, origin: originOnEdit(snap.data()), updatedAt: serverTimestamp() }); });
   return id;
 }
 export async function removeClub(id) { await deleteDoc(ref(id)); }
@@ -27,7 +28,7 @@ export async function saveCourse(clubId, courseId, fields) {
     const snap = await tx.get(ref(clubId)); if (!snap.exists()) throw new Error('Club no longer exists.');
     const courses = snap.data().courses || [];
     if (courseId && !courses.some(c => c.id === id)) throw new Error('Course no longer exists.');
-    tx.update(ref(clubId), { courses: courseId ? courses.map(c => c.id === id ? { ...c, ...value } : c) : [...courses, { id, ...value, teeSets: [] }], updatedAt: serverTimestamp() });
+    tx.update(ref(clubId), { courses: courseId ? courses.map(c => c.id === id ? { ...c, ...value, origin: originOnEdit(c) } : c) : [...courses, { id, ...value, origin: originOnCreate(), teeSets: [] }], updatedAt: serverTimestamp() });
   });
 }
 export async function removeCourse(clubId, courseId) { await runTransaction(db, async tx => { const snap = await tx.get(ref(clubId)); if (!snap.exists()) throw new Error('Club no longer exists.'); tx.update(ref(clubId), { courses: (snap.data().courses || []).filter(c => c.id !== courseId), updatedAt: serverTimestamp() }); }); }
@@ -40,7 +41,7 @@ export async function saveTee(clubId, courseId, teeId, fields) {
       if (c.id !== courseId) return c;
       const teeSets = c.teeSets || [];
       if (teeId && !teeSets.some(t => t.id === id)) throw new Error('Tee set no longer exists.');
-      return { ...c, teeSets: teeId ? teeSets.map(t => t.id === id ? { ...t, ...value } : t) : [...teeSets, { id, ...value }] };
+      return { ...c, teeSets: teeId ? teeSets.map(t => t.id === id ? { ...t, ...value, origin: originOnEdit(t) } : t) : [...teeSets, { id, ...value, origin: originOnCreate() }] };
     }), updatedAt: serverTimestamp() });
   });
 }

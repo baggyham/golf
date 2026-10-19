@@ -8,7 +8,8 @@ export function validateHoles(holes) {
   return result;
 }
 export function validateTee(input) {
-  return { name: text(input.name, 'Tee name'), colour: text(input.colour, 'Tee colour'), courseRating: num(input.courseRating, 'Course rating', 50, 90), slopeRating: num(input.slopeRating, 'Slope rating', 55, 155, true), yardage: num(input.yardage, 'Total yardage', 1000, 10000, true), gender: input.gender === 'women' ? 'women' : 'men' };
+  const colour = text(input.colour || input.name, 'Tee colour');
+  return { name: colour, colour, courseRating: num(input.courseRating, 'Course rating', 50, 90), slopeRating: num(input.slopeRating, 'Slope rating', 55, 155, true), yardage: num(input.yardage, 'Total yardage', 1000, 10000, true) };
 }
 export function validateCourse(input) { return { name: text(input.name, 'Course name'), holes: validateHoles(input.holes) }; }
 export function validateClub(input) { return { name: text(input.name, 'Club name'), location: String(input.location ?? '').trim().slice(0, 150) }; }

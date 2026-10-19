@@ -49,30 +49,47 @@ service cloud.firestore {
 
     // Shared manual course library. Available to registered BaggyGolf users.
     // Store club/course/tee details together to make edits transactional.
+    function validCourseOrigin(origin) {
+      return origin is map
+        && (
+          (origin.keys().hasOnly(['kind']) && origin.kind == 'manual')
+          ||
+          (origin.keys().hasAll(['kind', 'provider', 'externalId'])
+            && origin.keys().hasOnly(['kind', 'provider', 'externalId', 'locallyEdited'])
+            && origin.kind == 'api'
+            && origin.provider is string && origin.provider.size() > 0 && origin.provider.size() <= 80
+            && origin.externalId is string && origin.externalId.size() > 0 && origin.externalId.size() <= 200
+            && (!('locallyEdited' in origin) || origin.locallyEdited is bool))
+        );
+    }
+
     match /courseClubs/{clubId} {
       allow read: if signedIn();
       allow create: if signedIn()
         && exists(/databases/$(database)/documents/players/$(request.auth.uid))
-        && request.resource.data.keys().hasAll(['name', 'location', 'courses', 'createdAt', 'updatedAt'])
-        && request.resource.data.keys().hasOnly(['name', 'location', 'courses', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['name', 'location', 'courses', 'origin', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['name', 'location', 'courses', 'origin', 'createdAt', 'updatedAt'])
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 100
         && request.resource.data.location is string
         && request.resource.data.location.size() <= 150
+        && request.resource.data.origin is map
+        && validCourseOrigin(request.resource.data.origin)
         && request.resource.data.courses is list
         && request.resource.data.courses.size() == 0
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
       allow update: if signedIn()
         && exists(/databases/$(database)/documents/players/$(request.auth.uid))
-        && request.resource.data.keys().hasOnly(['name', 'location', 'courses', 'createdAt', 'updatedAt'])
-        && request.resource.data.keys().hasAll(['name', 'location', 'courses', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['name', 'location', 'courses', 'origin', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['name', 'location', 'courses', 'origin', 'createdAt', 'updatedAt'])
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 100
         && request.resource.data.location is string
         && request.resource.data.location.size() <= 150
+        && (!('origin' in request.resource.data) || validCourseOrigin(request.resource.data.origin))
         && request.resource.data.courses is list
         && request.resource.data.courses.size() <= 40
         && request.resource.data.createdAt == resource.data.createdAt
@@ -262,11 +279,11 @@ service cloud.firestore {
               && request.resource.data.courseSnapshot is map
               && request.resource.data.courseSnapshot.keys().hasAll([
                 'source', 'clubName', 'courseName', 'teeName', 'teeColour',
-                'teeGender', 'yardage', 'holes', 'totalPar', 'courseRating', 'slopeRating'
+                'yardage', 'holes', 'totalPar', 'courseRating', 'slopeRating'
               ])
               && request.resource.data.courseSnapshot.keys().hasOnly([
                 'source', 'clubName', 'courseName', 'teeName', 'teeColour',
-                'teeGender', 'yardage', 'holes', 'totalPar', 'courseRating', 'slopeRating'
+                'yardage', 'holes', 'totalPar', 'courseRating', 'slopeRating'
               ])
               && request.resource.data.courseSnapshot.source is map
               && request.resource.data.courseSnapshot.source.keys().hasAll(['clubId', 'courseId', 'teeId'])
@@ -279,7 +296,6 @@ service cloud.firestore {
               && request.resource.data.courseSnapshot.courseName == request.resource.data.courseName
               && request.resource.data.courseSnapshot.teeName is string
               && request.resource.data.courseSnapshot.teeColour is string
-              && request.resource.data.courseSnapshot.teeGender in ['men', 'women']
               && request.resource.data.courseSnapshot.yardage is int
               && request.resource.data.courseSnapshot.yardage >= 1000
               && request.resource.data.courseSnapshot.yardage <= 10000
