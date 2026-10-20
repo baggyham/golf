@@ -283,10 +283,7 @@ export default function ScoreEntry({ tournament, round }) {
       }}
     >
       <div className="flex shrink-0 items-center justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--gold, #987540)' }}>{tournament.name} · {round.name}</p>
-          <h3 className="text-xl font-semibold">Scorecard</h3>
-        </div>
+        <p className="min-w-0 truncate text-sm font-semibold" style={{ color: 'var(--muted, #68796C)' }}>{round.name}</p>
         <button type="button" className="shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold" style={{ borderColor: 'var(--line, #E1E6DA)', background: 'var(--surface, white)' }} onClick={() => setShowSummary((value) => !value)}>{showSummary ? '← Scores' : 'Full card'}</button>
       </div>
 
@@ -310,10 +307,9 @@ export default function ScoreEntry({ tournament, round }) {
 
         {loading ? <p role="status">Loading scorecards…</p> : (
           <div className="live-score-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border" style={{ background: 'var(--surface, white)', borderColor: 'var(--line, #E1E6DA)' }}>
-            <div className="live-score-hole flex shrink-0 items-center justify-between px-3 py-4 sm:py-5" style={{ background: 'var(--primary, #173D30)', color: 'var(--on-primary, #FFFFFF)' }}>
+            <div className="live-score-hole flex shrink-0 items-center justify-between px-3 py-3 sm:py-4" style={{ background: 'var(--primary, #173D30)', color: 'var(--on-primary, #FFFFFF)' }}>
               <button type="button" aria-label="Previous hole" disabled={holeIndex === 0} onClick={() => setHoleIndex((n) => n - 1)} className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 text-xl disabled:opacity-30">‹</button>
               <div className="text-center">
-                <p className="live-score-eyebrow">LIVE SCORING</p>
                 <p className="text-2xl font-bold leading-tight">Hole {hole.number ?? holeIndex + 1} <span className="text-sm font-normal opacity-75">/ 18</span></p>
                 <p className="mt-1 text-xs opacity-80">Par {hole.par} · SI {hole.strokeIndex} · {recordedCount}/{participants.length} entered</p>
               </div>
