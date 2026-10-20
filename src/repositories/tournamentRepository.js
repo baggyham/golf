@@ -1,5 +1,6 @@
 import { majorThemeById } from '../lib/majorThemes.js';
 import { calculateFinalTournamentResults } from '../lib/tournamentFinalization.js';
+import { evaluatePlayoff, resolveMajorStandings, tiedLeaders } from '../lib/playoffs.js';
 
 import {
     addDoc,
@@ -300,7 +301,22 @@ export async function completeTournament(tournamentId) {
       }
       allRounds.push({ round, verifiedScores });
     }
-    const { standings, winnerIds } = calculateFinalTournamentResults(tournament, allRounds);
+    const calculated = calculateFinalTournamentResults(tournament, allRounds);
+    let { standings, winnerIds } = calculated;
+    if (tournament.tier === 'major' && tiedLeaders(standings).length > 1) {
+      const playoffSnapshot = await transaction.get(doc(tournamentRef, 'playoffs', 'championship'));
+      if (!playoffSnapshot.exists() || playoffSnapshot.data().status !== 'completed') {
+        throw new Error('This Major is tied. Complete the championship playoff before finishing the tournament.');
+      }
+      const playoff = playoffSnapshot.data();
+      const evaluation = evaluatePlayoff(playoff);
+      if (!evaluation.complete || !evaluation.winnerId || evaluation.winnerId !== playoff.winnerId ||
+          !tiedLeaders(standings).includes(playoff.winnerId)) {
+        throw new Error('Playoff results are incomplete or inconsistent.');
+      }
+      standings = resolveMajorStandings(standings, playoff.winnerId);
+      winnerIds = [playoff.winnerId];
+    }
     transaction.update(tournamentRef, {
       status: 'completed',
       completedAt: serverTimestamp(),

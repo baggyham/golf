@@ -11,6 +11,7 @@ import RoundList from './rounds/RoundList.jsx';
 import RoundSetupEditor from './rounds/RoundSetupEditor.jsx';
 import FinalTournamentResults from './FinalTournamentResults.jsx';
 import HistoricalRoundScorecard from './HistoricalRoundScorecard.jsx';
+import ChampionshipPlayoff from './ChampionshipPlayoff.jsx';
 
 export default function TournamentOverview({tournamentId, onBack, onDraftManagementChange, onTournamentChange}) {
     const {user} = useAuth();
@@ -24,6 +25,7 @@ export default function TournamentOverview({tournamentId, onBack, onDraftManagem
     const [starting, setStarting] = useState(false);
     const [completing, setCompleting] = useState(false);
     const [completeError, setCompleteError] = useState('');
+    const [playoffState, setPlayoffState] = useState({required: null, status: null});
     const [startError, setStartError] = useState('');
     const [rounds, setRounds] = useState([]);
     const [roundsLoading, setRoundsLoading] = useState(true);
@@ -379,6 +381,10 @@ export default function TournamentOverview({tournamentId, onBack, onDraftManagem
                             <p role="alert" className="text-sm text-red-600">{roundsError}</p> :
                             <RoundList rounds={rounds} tournament={tournament} onScorecardSaved={loadRounds} onFocusedScoringChange={setFocusedScoring}/>}
                     </section>}
+                    {!focusedScoring && tournament.status === 'in_progress' && tournamentTier(tournament) === 'major' &&
+                        !roundsLoading && !roundsError && rounds.length > 0 && rounds.every(round => round.status === 'completed') && (
+                          <ChampionshipPlayoff tournament={tournament} rounds={rounds} onStatus={setPlayoffState} />
+                        )}
                     {!focusedScoring && isOrganiser && tournament.status === 'in_progress' && (
                         <section className="baggy-surface space-y-3 rounded-xl p-4" aria-label="Complete tournament">
                             <div className="flex items-center justify-between gap-3">
@@ -386,13 +392,16 @@ export default function TournamentOverview({tournamentId, onBack, onDraftManagem
                                 <span className="baggy-muted text-xs">Final step</span>
                             </div>
                             {completeError && <p role="alert" className="text-sm text-red-600">{completeError}</p>}
-                            <button type="button" disabled={completing || roundsLoading || Boolean(roundsError) || !rounds.length || !rounds.every((round) => round.status === 'completed')}
+                            <button type="button" disabled={completing || roundsLoading || Boolean(roundsError) || !rounds.length || !rounds.every((round) => round.status === 'completed') || (tournamentTier(tournament) === 'major' && (playoffState.required === null || (playoffState.required && playoffState.status !== 'completed')))}
                                 onClick={handleComplete} className="min-h-12 w-full rounded-lg px-4 text-sm font-semibold disabled:opacity-50"
                                 style={{background: 'var(--primary)', color: 'var(--on-primary)'}}>
                                 {completing ? 'Completing…' : 'Complete tournament'}
                             </button>
+                            {(tournamentTier(tournament) === 'major' && rounds.length > 0 && rounds.every((round) => round.status === 'completed') && (playoffState.required === null || (playoffState.required && playoffState.status !== 'completed'))) && (
+                                <p className="baggy-muted text-xs">{playoffState.required === null ? 'Checking championship results…' : 'Complete the championship playoff to crown a winner.'}</p>
+                            )}
                             {(!rounds.length || rounds.some((round) => round.status !== 'completed')) && (
-                                <p className="baggy-muted text-xs">Complete every round before finishing the tournament.</p>
+                                <p className="baggy-muted text-xs">Complete every round and resolve any Major playoff before finishing the tournament.</p>
                             )}
                         </section>
                     )}

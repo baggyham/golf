@@ -239,10 +239,144 @@ service cloud.firestore {
             && request.resource.data.winnerIds.size()
               <= resource.data.participantIds.size()
             && request.resource.data.participantIds.hasAll(request.resource.data.winnerIds)
+            && (resource.data.get('tier', 'casual') != 'major' || (
+              request.resource.data.winnerIds.size() == 1
+              && (!exists(/databases/$(database)/documents/tournaments/$(tournamentId)/playoffs/championship) || (
+                get(/databases/$(database)/documents/tournaments/$(tournamentId)/playoffs/championship).data.status == 'completed'
+                && get(/databases/$(database)/documents/tournaments/$(tournamentId)/playoffs/championship).data.winnerId == request.resource.data.winnerIds[0]
+              ))
+            ))
           )
         );
 
       allow delete: if false;
+
+      // Playoff attempts are separate from ordinary round scores and never
+      // count towards regular-round Stableford totals. Organiser writes only.
+      match /playoffs/{playoffId} {
+        allow get, list: if signedIn();
+
+        function permittedPlayoff() {
+          return playoffId == 'championship'
+            && organiser(tournamentId)
+            && get(tournamentPath(tournamentId)).data.status == 'in_progress'
+            && get(tournamentPath(tournamentId)).data.get('tier', 'casual') == 'major';
+        }
+        function validScore(score, format) {
+          return score == null || (format == 'full_round' && score == 'pickup')
+            || (score is int && score >= 1 && score <= 30);
+        }
+        function validScoreList(values, format) {
+          return values is list && values.size() == 18
+            && validScore(values[0], format)
+            && validScore(values[1], format)
+            && validScore(values[2], format)
+            && validScore(values[3], format)
+            && validScore(values[4], format)
+            && validScore(values[5], format)
+            && validScore(values[6], format)
+            && validScore(values[7], format)
+            && validScore(values[8], format)
+            && validScore(values[9], format)
+            && validScore(values[10], format)
+            && validScore(values[11], format)
+            && validScore(values[12], format)
+            && validScore(values[13], format)
+            && validScore(values[14], format)
+            && validScore(values[15], format)
+            && validScore(values[16], format)
+            && validScore(values[17], format);
+        }
+        function playerScores(data, i) {
+          let id = data.playerIds[i];
+          return id is string && data.scores[id] is list
+            && validScoreList(data.scores[id], data.format)
+            && data.playingHandicaps[id] is int
+            && data.playingHandicaps[id] >= -30
+            && data.playingHandicaps[id] <= 100;
+        }
+        function validPlayoffSetup(data) {
+          return data.format in ['full_round', 'sudden_death']
+            && data.playerIds is list
+            && data.playerIds.size() >= 2 && data.playerIds.size() <= 4
+            && data.playerIds.toSet().size() == data.playerIds.size()
+            && get(tournamentPath(tournamentId)).data.participantIds.hasAll(data.playerIds)
+            && data.sourceRoundId is string
+            && data.courseName is string && data.courseName.size() <= 120
+            && validRoundScorecard(data.scorecard)
+            && data.scores is map && data.playingHandicaps is map
+            && data.scores.keys().toSet() == data.playerIds.toSet()
+            && data.playingHandicaps.keys().toSet() == data.playerIds.toSet()
+            && playerScores(data, 0)
+            && playerScores(data, 1)
+            && (data.playerIds.size() < 3 || playerScores(data, 2))
+            && (data.playerIds.size() < 4 || playerScores(data, 3));
+        }
+        function validSetupSource(data) {
+          return exists(/databases/$(database)/documents/tournaments/$(tournamentId)/rounds/$(data.sourceRoundId))
+            && get(/databases/$(database)/documents/tournaments/$(tournamentId)/rounds/$(data.sourceRoundId)).data.status == 'completed'
+            && get(/databases/$(database)/documents/tournaments/$(tournamentId)/rounds/$(data.sourceRoundId)).data.scorecard == data.scorecard;
+        }
+        allow create: if permittedPlayoff()
+          && request.resource.data.keys().hasOnly([
+            'format', 'playerIds', 'sourceRoundId', 'courseName', 'scorecard',
+            'playingHandicaps', 'scores', 'status', 'attempt', 'history',
+            'winnerId', 'createdAt', 'updatedAt'
+          ])
+          && request.resource.data.keys().hasAll([
+            'format', 'playerIds', 'sourceRoundId', 'courseName', 'scorecard',
+            'playingHandicaps', 'scores', 'status', 'attempt', 'history',
+            'winnerId', 'createdAt', 'updatedAt'
+          ])
+          && request.resource.data.status == 'in_progress'
+          && request.resource.data.attempt == 1
+          && request.resource.data.winnerId == null
+          && request.resource.data.history == []
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time
+          && validPlayoffSetup(request.resource.data)
+          && validSetupSource(request.resource.data);
+
+        allow update: if permittedPlayoff()
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.createdAt == resource.data.createdAt
+          && (
+            // Save a hole. Immutable format and participants.
+            (resource.data.status == 'in_progress'
+              && request.resource.data.status == 'in_progress'
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['scores', 'updatedAt'])
+              && validPlayoffSetup(request.resource.data))
+            ||
+            // Confirm winner, or declare an attempt tied.
+            (resource.data.status == 'in_progress'
+              && request.resource.data.status in ['completed', 'tied']
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['status', 'winnerId', 'finishedAt', 'updatedAt'])
+              && request.resource.data.finishedAt == request.time
+              && (request.resource.data.status == 'tied'
+                ? request.resource.data.winnerId == null
+                : request.resource.data.winnerId in resource.data.playerIds))
+            ||
+            // Archive a tied attempt and open another (maximum ten).
+            (resource.data.status == 'tied'
+              && request.resource.data.status == 'in_progress'
+              && resource.data.attempt < 10
+              && request.resource.data.attempt == resource.data.attempt + 1
+              && request.resource.data.winnerId == null
+              && request.resource.data.history is list
+              && request.resource.data.history.size() == resource.data.history.size() + 1
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'format', 'playerIds', 'sourceRoundId', 'courseName',
+                'scorecard', 'playingHandicaps', 'scores', 'status',
+                'attempt', 'history', 'winnerId', 'updatedAt'
+              ])
+              && resource.data.playerIds.hasAll(request.resource.data.playerIds)
+              && validPlayoffSetup(request.resource.data)
+              && validSetupSource(request.resource.data))
+          );
+        allow delete: if false;
+      }
 
       match /rounds/{roundId} {
         allow get, list: if signedIn();
